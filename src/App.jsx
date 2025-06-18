@@ -60,37 +60,14 @@ const App = () => {
         }
     }, [selectedTags, queryMode]);
 
-    // Function to fetch data from the SPARQL endpoint based on the selected tags and query mode
+    // Function to fetch data from the SPARQL endpoint based on the constructed query
     const fetchImageUris = async () => {
-        if (!selectedTags.length) {
+        const sparqlQuery = getSparqlQuery();
+        if (!sparqlQuery) {
             setImageUris([]);
             setError(null);
             setQueryTime(null);
             return;
-        }
-        let sparqlQuery = '';
-        if (queryMode === 'intersection') {
-            // Images must have all tags
-            const tagFilters = selectedTags
-                .map(tag => `?s <http://lsc.dcu.ie/schema#tag> <http://lsc.dcu.ie/tag#${tag.replace(/"/g, '\\"')}> .`)
-                .join('\n');
-            sparqlQuery = `
-                SELECT DISTINCT ?s
-                WHERE {
-                    ${tagFilters}
-                }
-            `;
-        } else {
-            // Union: images with any of the tags
-            const unionFilters = selectedTags
-                .map(tag => `{ ?s <http://lsc.dcu.ie/schema#tag> <http://lsc.dcu.ie/tag#${tag.replace(/"/g, '\\"')}> }`)
-                .join(' UNION ');
-            sparqlQuery = `
-                SELECT DISTINCT ?s
-                WHERE {
-                    ${unionFilters}
-                }
-            `;
         }
         try {
             setLoading(true);
@@ -107,7 +84,7 @@ const App = () => {
             setImageUris(uris);
         } catch (err) {
             console.error('Error fetching image data:', err);
-            setError(`Failed to fetch data for tags '${selectedTags.join(", ")}': ${err.message}`);
+            setError(`Failed to fetch data: ${err.message}`);
             setQueryTime(null);
         } finally {
             setLoading(false);
@@ -116,28 +93,31 @@ const App = () => {
 
     // Function to construct the SPARQL query for display and execution
     const getSparqlQuery = () => {
-        if (!selectedTags.length) return '';
-        if (queryMode === 'intersection') {
-            const tagFilters = selectedTags
-                .map(tag => `    ?s <http://lsc.dcu.ie/schema#tag> <http://lsc.dcu.ie/tag#${tag.replace(/"/g, '\\"')}> .`)
-                .join('\n');
-            return [
-                'SELECT DISTINCT ?s',
-                'WHERE {',
-                tagFilters,
-                '}'
-            ].join('\n');
-        } else {
-            const unionFilters = selectedTags
-                .map(tag => `    { ?s <http://lsc.dcu.ie/schema#tag> <http://lsc.dcu.ie/tag#${tag.replace(/"/g, '\\"')}> . }`)
-                .join('\n    UNION\n');
-            return [
-                'SELECT DISTINCT ?s',
-                'WHERE {',
-                unionFilters,
-                '}'
-            ].join('\n');
+        if (!selectedTags.length && !selectedCountry) return '';
+        let whereClauses = [];
+        if (selectedTags.length) {
+            if (queryMode === 'intersection') {
+                whereClauses = [
+                    ...selectedTags.map(tag => `    ?s lsc:tag tag:${tag.replace(/"/g, '\"')} . `)
+                ];
+            } else {
+                const unionFilters = selectedTags
+                    .map(tag => `    { ?s lsc:tag tag:${tag.replace(/"/g, '\"')} . }`)
+                    .join('\n    UNION\n');
+                whereClauses = [unionFilters];
+            }
         }
+        if (selectedCountry) {
+            whereClauses.push(`    ?s lsc:country "${selectedCountry.replace(/"/g, '\"')}" .`);
+        }
+        return [
+            'PREFIX lsc: <http://lsc.dcu.ie/schema#>',
+            'PREFIX tag: <http://lsc.dcu.ie/tag#>',
+            'SELECT DISTINCT ?s',
+            'WHERE {',
+            whereClauses.join('\n'),
+            '}'
+        ].join('\n');
     };
 
     // useEffect to trigger the fetch function whenever 'triggerFetch' state changes
@@ -184,10 +164,10 @@ const App = () => {
 
     // Handler for search button click
     const handleSearchClick = () => {
-        // Only trigger fetch if at least one tag is selected and all are valid
-        if (selectedTags.length > 0 && selectedTags.every(tag =>
+        // Only trigger fetch if at least one tag or a country is selected and all tags are valid
+        if ((selectedTags.length > 0 && selectedTags.every(tag =>
             allTags.map(t => t.toLowerCase()).includes(tag.toLowerCase())
-        )) {
+        )) || selectedCountry) {
             setTriggerFetch(prev => prev + 1);
         }
     };
@@ -238,7 +218,7 @@ const App = () => {
                         <button
                             onClick={handleSearchClick}
                             className="mb-6 px-6 py-3 bg-blue-600 text-white font-semibold rounded-md shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-150 ease-in-out w-full max-w-xs"
-                            disabled={loadingTags || loading || selectedTags.length === 0}
+                            disabled={loadingTags || loading || (selectedTags.length === 0 && !selectedCountry)}
                         >
                             {loadingTags ? "Loading..." : "Query"}
                         </button>
