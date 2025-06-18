@@ -1,0 +1,50 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Production build artifacts
+dist/
+build/
+.parcel-cache/ # Parcel specific, but good to include generally
+.vite/ # Vite specific cache directory
+
+# Compiled output
+*.js.map
+*.css.map
+
+# IDE and Editor files
+.idea/ # IntelliJ IDEA project files
+.vscode/ # VS Code
+.DS_Store # macOS files
+Thumbs.db # Windows files
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# npm/yarn specific files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Local development server and testing
+.cache/
+.eslintcache
+
+# Other
+coverage/
+*.tgz
+.npmrc
+.yarnrc
+.yarn/
+.pnp.*
+.vscode-test

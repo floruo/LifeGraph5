@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lifelog Frontend</title>
+    <!-- Tailwind CSS CDN for quick setup -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Configure Tailwind to use 'Inter' font and apply rounded corners globally -->
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+      * {
+        border-radius: 0.5rem; /* Apply rounded corners to all elements */
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
