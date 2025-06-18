@@ -1,7 +1,8 @@
 // App.jsx
 import React, { useState, useEffect } from 'react';
 import TagSelector from './components/TagSelector';
-import { executeSparqlQuery, fetchAllTags } from './utils/sparql';
+import CountrySelector from './components/CountrySelector';
+import { executeSparqlQuery, fetchAllTags, fetchAllCountries } from './utils/sparql';
 
 // CollapsiblePanel component for left/right columns
 const CollapsiblePanel = ({ title, children, defaultOpen = true, className = "" }) => {
@@ -28,6 +29,13 @@ const App = () => {
     const [triggerFetch, setTriggerFetch] = useState(0);  // State to trigger fetch manually
     const [allTags, setAllTags] = useState([]);           // State to store all available tags for autocomplete
     const [loadingTags, setLoadingTags] = useState(true); // State for tag loading
+
+    // Country selector state
+    const [allCountries, setAllCountries] = useState([]);
+    const [loadingCountries, setLoadingCountries] = useState(true);
+    const [selectedCountry, setSelectedCountry] = useState('');
+    const [countrySearch, setCountrySearch] = useState('');
+    const [forceFetchCountries, setForceFetchCountries] = useState(false);
 
     // State for URI overlay
     const [overlayImageUrl, setOverlayImageUrl] = useState(null);
@@ -157,6 +165,13 @@ const App = () => {
         // eslint-disable-next-line
     }, [forceFetchTags]);
 
+    // useEffect to fetch all countries once on component mount or when forceFetchCountries changes
+    useEffect(() => {
+        fetchAllCountries(setAllCountries, setLoadingCountries, forceFetchCountries);
+        if (forceFetchCountries) setForceFetchCountries(false);
+        // eslint-disable-next-line
+    }, [forceFetchCountries]);
+
     // Handler for URI overlay
     const handleImageClick = (originalUri) => {
         setOverlayImageUrl(originalUri);
@@ -184,51 +199,40 @@ const App = () => {
                     LifeGraph 5
                 </h1>
                 <div className="flex flex-row items-start gap-12">
-                    <CollapsiblePanel title="Tag Search">
-                        {/* Only show either the refresh button or the tag selector, never both */}
-                        {loadingTags ? (
-                            <div className="mb-4 w-full flex flex-row gap-2 items-center">
-                                <button
-                                    className="px-3 py-1 bg-gray-200 text-gray-700 rounded shadow hover:bg-gray-300 transition text-xs"
-                                    disabled
-                                    type="button"
-                                >
-                                    Refresh Tags
-                                </button>
-                                <span className="text-xs text-gray-400 ml-2">Loading...</span>
-                            </div>
-                        ) : (
-                            <>
-                                <TagSelector
-                                    selectedTags={selectedTags}
-                                    setSelectedTags={setSelectedTags}
-                                    queryMode={queryMode}
-                                    setQueryMode={setQueryMode}
-                                    loadingTags={loadingTags}
-                                    setLoadingTags={setLoadingTags}
-                                    allTags={allTags}
-                                    setAllTags={setAllTags}
-                                    forceFetchTags={forceFetchTags}
-                                    setForceFetchTags={setForceFetchTags}
-                                    tagSearch={tagSearch}
-                                    setTagSearch={setTagSearch}
-                                    fetchAllTags={(force) => fetchAllTags(setAllTags, setLoadingTags, force)}
-                                />
-                                {/* Clear tags button */}
-                                {selectedTags.length > 0 && (
-                                    <div className="mb-4 w-full flex flex-row justify-end">
-                                        <button
-                                            className="px-3 py-1 bg-red-100 text-red-700 rounded shadow hover:bg-red-200 transition text-xs"
-                                            onClick={() => setSelectedTags([])}
-                                            type="button"
-                                        >
-                                            Clear Tags
-                                        </button>
-                                    </div>
-                                )}
-                            </>
-                        )}
-                    </CollapsiblePanel>
+                    <div className="flex flex-col gap-6">
+                        <CollapsiblePanel title="Tag Search">
+                            <TagSelector
+                                selectedTags={selectedTags}
+                                setSelectedTags={setSelectedTags}
+                                queryMode={queryMode}
+                                setQueryMode={setQueryMode}
+                                loadingTags={loadingTags}
+                                setLoadingTags={setLoadingTags}
+                                allTags={allTags}
+                                setAllTags={setAllTags}
+                                forceFetchTags={forceFetchTags}
+                                setForceFetchTags={setForceFetchTags}
+                                tagSearch={tagSearch}
+                                setTagSearch={setTagSearch}
+                                fetchAllTags={(force) => fetchAllTags(setAllTags, setLoadingTags, force)}
+                            />
+                        </CollapsiblePanel>
+                        <CollapsiblePanel title="Country Search">
+                            <CountrySelector
+                                selectedCountry={selectedCountry}
+                                setSelectedCountry={setSelectedCountry}
+                                loadingCountries={loadingCountries}
+                                setLoadingCountries={setLoadingCountries}
+                                allCountries={allCountries}
+                                setAllCountries={setAllCountries}
+                                forceFetchCountries={forceFetchCountries}
+                                setForceFetchCountries={setForceFetchCountries}
+                                countrySearch={countrySearch}
+                                setCountrySearch={setCountrySearch}
+                                fetchAllCountries={(force) => fetchAllCountries(setAllCountries, setLoadingCountries, force)}
+                            />
+                        </CollapsiblePanel>
+                    </div>
                     <div className="flex-[2_2_0%] min-w-0 flex flex-col items-center justify-start p-4 bg-gray-50 rounded-lg shadow-md">
                         {/* Query button at the top */}
                         <button

@@ -64,3 +64,50 @@ export const fetchAllTags = async (setAllTags, setLoadingTags, force = false) =>
         setLoadingTags(false);
     }
 };
+
+export const fetchAllCountries = async (setAllCountries, setLoadingCountries, force = false) => {
+    const cacheKey = 'allLscCountries';
+    if (!force) {
+        try {
+            const cachedCountries = localStorage.getItem(cacheKey);
+            if (cachedCountries) {
+                const countries = JSON.parse(cachedCountries).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+                setAllCountries(countries);
+                setLoadingCountries(false);
+                return;
+            }
+        } catch (e) {
+            console.error('Could not access localStorage:', e);
+        }
+    }
+    const countriesQuery = `
+        SELECT DISTINCT ?country
+        WHERE {
+            ?s <http://lsc.dcu.ie/schema#country> ?country .
+        }
+    `;
+    try {
+        setLoadingCountries(true);
+        const bindings = await executeSparqlQuery(countriesQuery);
+        const countries = bindings
+            .map(binding => {
+                const fullCountry = binding.country?.value;
+                if (!fullCountry) return null;
+                const idx = fullCountry.indexOf('http://lsc.dcu.ie/country#');
+                const countryName = idx !== -1 ? fullCountry.substring('http://lsc.dcu.ie/country#'.length) : fullCountry;
+                return countryName;
+            })
+            .filter(Boolean)
+            .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+        setAllCountries(countries);
+        try {
+            localStorage.setItem(cacheKey, JSON.stringify(countries));
+        } catch (e) {
+            console.error('Could not save countries to localStorage:', e);
+        }
+    } catch (err) {
+        console.error('Error fetching countries for autocomplete:', err);
+    } finally {
+        setLoadingCountries(false);
+    }
+};
