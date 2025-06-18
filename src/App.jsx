@@ -1,5 +1,7 @@
 // App.jsx
 import React, { useState, useEffect } from 'react';
+import TagSelector from './components/TagSelector';
+import { executeSparqlQuery, fetchAllTags } from './utils/sparql';
 
 // CollapsiblePanel component for left/right columns
 const CollapsiblePanel = ({ title, children, defaultOpen = true, className = "" }) => {
@@ -41,108 +43,7 @@ const App = () => {
 
     // State for query execution time
     const [queryTime, setQueryTime] = useState(null);
-
-    // Your SPARQL endpoint URL for GET requests
-    const sparqlEndpointUrl = 'http://localhost:8080/query/sparql';
-
-    // Generic function to execute a SPARQL query and return the bindings
-    const executeSparqlQuery = async (sparqlQuery) => {
-        const urlWithQuery = `${sparqlEndpointUrl}?query=${encodeURIComponent(sparqlQuery)}`;
-        const response = await fetch(urlWithQuery, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/sparql-results+json'
-            },
-        });
-        if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-        const data = await response.json();
-        return data.results && data.results.bindings ? data.results.bindings : [];
-    };
-
     const [forceFetchTags, setForceFetchTags] = useState(false);
-
-    // Function to fetch all distinct tags for autocomplete, with caching
-    const fetchAllTags = async (force = false) => {
-        const cacheKey = 'allLscTags';
-        if (!force) {
-            try {
-                const cachedTags = localStorage.getItem(cacheKey);
-                if (cachedTags) {
-                    const tags = JSON.parse(cachedTags).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
-                    setAllTags(tags);
-                    setLoadingTags(false);
-                    return;
-                }
-            } catch (e) {
-                console.error('Could not access localStorage:', e);
-            }
-        }
-
-        // If not in cache or force is true, fetch from the server.
-        const tagsQuery = `
-            SELECT DISTINCT ?tag
-            WHERE {
-                ?s <http://lsc.dcu.ie/schema#tag> ?tag .
-            }
-            `;
-        try {
-            setLoadingTags(true);
-            const bindings = await executeSparqlQuery(tagsQuery);
-            const tags = bindings
-                .map(binding => {
-                    const fullTag = binding.tag?.value;
-                    if (!fullTag) return null;
-                    const idx = fullTag.indexOf('http://lsc.dcu.ie/tag#');
-                    const tagName = idx !== -1 ? fullTag.substring('http://lsc.dcu.ie/tag#'.length) : fullTag;
-                    return tagName;
-                })
-                .filter(Boolean)
-                .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
-            setAllTags(tags);
-            try {
-                localStorage.setItem(cacheKey, JSON.stringify(tags));
-            } catch (e) {
-                console.error('Could not save tags to localStorage:', e);
-            }
-        } catch (err) {
-            console.error('Error fetching tags for autocomplete:', err);
-        } finally {
-            setLoadingTags(false);
-        }
-    };
-
-    const handleTagSearchChange = (event) => {
-        setTagSearch(event.target.value.toLowerCase());
-    };
-
-    // Handler for tag selection from custom list
-
-    const handleTagSelect = (tagValue) => {
-        const selectedLower = tagValue.toLowerCase();
-        if (selectedTags.map(st => st.toLowerCase()).includes(selectedLower)) {
-            setSelectedTags(selectedTags.filter(st => st.toLowerCase() !== selectedLower));
-        } else {
-            setSelectedTags([...selectedTags, tagValue]);
-        }
-        setTagSearch('');
-    };
-
-    // Handler to remove a tag from the set
-    const handleRemoveTag = (tagToRemove) => {
-        setSelectedTags(selectedTags.filter(t => t !== tagToRemove));
-    };
-
-    // Handler for search button click
-    const handleSearchClick = () => {
-        // Only trigger fetch if at least one tag is selected and all are valid
-        if (selectedTags.length > 0 && selectedTags.every(tag =>
-            allTags.map(t => t.toLowerCase()).includes(tag.toLowerCase())
-        )) {
-            setTriggerFetch(prev => prev + 1);
-        }
-    };
 
     // Ensure queryMode is reset to 'intersection' if only one or zero tags are selected
     useEffect(() => {
@@ -231,13 +132,6 @@ ${unionFilters}
         }
     };
 
-    // Filter tags based on search input and not already selected (case-insensitive)
-    const filteredTags = allTags.filter(
-        t =>
-            t.toLowerCase().includes(tagSearch) &&
-            !selectedTags.map(st => st.toLowerCase()).includes(t.toLowerCase())
-    );
-
     // useEffect to trigger the fetch function whenever 'triggerFetch' state changes
     useEffect(() => {
         fetchImageUris();
@@ -246,7 +140,7 @@ ${unionFilters}
 
     // useEffect to fetch all tags once on component mount or when forceFetchTags changes
     useEffect(() => {
-        fetchAllTags(forceFetchTags);
+        fetchAllTags(setAllTags, setLoadingTags, forceFetchTags);
         if (forceFetchTags) setForceFetchTags(false);
         // eslint-disable-next-line
     }, [forceFetchTags]);
@@ -261,6 +155,16 @@ ${unionFilters}
         setOverlayImageUrl(null);
     };
 
+    // Handler for search button click
+    const handleSearchClick = () => {
+        // Only trigger fetch if at least one tag is selected and all are valid
+        if (selectedTags.length > 0 && selectedTags.every(tag =>
+            allTags.map(t => t.toLowerCase()).includes(tag.toLowerCase())
+        )) {
+            setTriggerFetch(prev => prev + 1);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-gray-100 flex flex-col items-center p-4 font-inter">
             <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-6xl">
@@ -269,96 +173,21 @@ ${unionFilters}
                 </h1>
                 <div className="flex flex-row items-start gap-12">
                     <CollapsiblePanel title="Tag Search">
-                        {/* Force fetch tags button */}
-                        <div className="mb-4 w-full flex flex-row gap-2 items-center">
-                            <button
-                                className="px-3 py-1 bg-gray-200 text-gray-700 rounded shadow hover:bg-gray-300 transition text-xs"
-                                onClick={() => setForceFetchTags(true)}
-                                disabled={loadingTags}
-                                type="button"
-                            >
-                                Refresh Tags
-                            </button>
-                            {loadingTags && (
-                                <span className="text-xs text-gray-400 ml-2">Loading...</span>
-                            )}
-                        </div>
-                        {/* Combined tag search and selection dropdown */}
-                        <div className="mb-6 w-full relative">
-                            <input
-                                type="text"
-                                className="p-3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-gray-900 w-full"
-                                placeholder={loadingTags ? "Loading tags..." : "Type to search or select tags"}
-                                value={tagSearch}
-                                onChange={handleTagSearchChange}
-                                disabled={loadingTags}
-                                autoComplete="off"
-                            />
-                            {/* Custom tag list without selector/highlighter */}
-                            <div
-                                className="max-h-48 overflow-y-auto border border-t-0 border-gray-300 rounded-b-md bg-white w-full"
-                                style={{ marginTop: '-2px' }}
-                            >
-                                {loadingTags ? (
-                                    <div className="p-3 text-gray-400">Loading tags...</div>
-                                ) : filteredTags.length === 0 ? (
-                                    <div className="p-3 text-gray-400">No tags found</div>
-                                ) : (
-                                    filteredTags.map((t, index) => (
-                                        <div
-                                            key={index}
-                                            className="p-3 cursor-pointer hover:bg-blue-100 flex items-center"
-                                            onClick={() => handleTagSelect(t)}
-                                        >
-                                            {selectedTags.map(st => st.toLowerCase()).includes(t.toLowerCase()) ? (
-                                                <span className="mr-2 text-green-600">✔</span>
-                                            ) : null}
-                                            {t.replace(/_/g, ' ').toLowerCase()}
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        </div>
-                        {/* AND/OR toggle, only if more than one tag is selected */}
-                        {selectedTags.length > 1 && (
-                            <div className="mb-4 flex w-full gap-2">
-                                <button
-                                    className={`flex-1 flex items-center justify-center px-2 py-1 rounded ${queryMode === 'intersection' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-                                    onClick={() => setQueryMode('intersection')}
-                                    title="Intersection (AND): Only images with all tags"
-                                    type="button"
-                                >
-                                    AND
-                                </button>
-                                <button
-                                    className={`flex-1 flex items-center justify-center px-2 py-1 rounded ${queryMode === 'union' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-                                    onClick={() => setQueryMode('union')}
-                                    title="Union (OR): Images with any tag"
-                                    type="button"
-                                >
-                                    OR
-                                </button>
-                            </div>
-                        )}
-                        {/* Display selected tags as a set */}
-                        <div className="mb-4 flex flex-wrap gap-2">
-                            {selectedTags.map((t, idx) => (
-                                <span
-                                    key={t}
-                                    className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs flex items-center"
-                                >
-                                    {t.replace(/_/g, ' ').toLowerCase()}
-                                    <button
-                                        className="ml-2 text-blue-500 hover:text-red-600 font-bold"
-                                        onClick={() => handleRemoveTag(t)}
-                                        title="Remove tag"
-                                        type="button"
-                                    >
-                                        &times;
-                                    </button>
-                                </span>
-                            ))}
-                        </div>
+                        <TagSelector
+                            selectedTags={selectedTags}
+                            setSelectedTags={setSelectedTags}
+                            queryMode={queryMode}
+                            setQueryMode={setQueryMode}
+                            loadingTags={loadingTags}
+                            setLoadingTags={setLoadingTags}
+                            allTags={allTags}
+                            setAllTags={setAllTags}
+                            forceFetchTags={forceFetchTags}
+                            setForceFetchTags={setForceFetchTags}
+                            tagSearch={tagSearch}
+                            setTagSearch={setTagSearch}
+                            fetchAllTags={(force) => fetchAllTags(setAllTags, setLoadingTags, force)}
+                        />
                     </CollapsiblePanel>
                     <div className="flex-[2_2_0%] min-w-0 flex flex-col items-center justify-start p-4 bg-gray-50 rounded-lg shadow-md">
                         {/* Query button at the top */}
