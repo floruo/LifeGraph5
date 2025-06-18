@@ -140,8 +140,20 @@ ${unionFilters}
 
     // useEffect to fetch all tags once on component mount or when forceFetchTags changes
     useEffect(() => {
-        fetchAllTags(setAllTags, setLoadingTags, forceFetchTags);
-        if (forceFetchTags) setForceFetchTags(false);
+        fetchAllTags(
+            setAllTags,
+            setLoadingTags,
+            /* force */ forceFetchTags
+        );
+        if (forceFetchTags) {
+            // Remove cache so fetchAllTags will fetch from server
+            try {
+                localStorage.removeItem('allLscTags');
+            } catch (e) {
+                // ignore
+            }
+            setForceFetchTags(false);
+        }
         // eslint-disable-next-line
     }, [forceFetchTags]);
 
@@ -173,21 +185,35 @@ ${unionFilters}
                 </h1>
                 <div className="flex flex-row items-start gap-12">
                     <CollapsiblePanel title="Tag Search">
-                        <TagSelector
-                            selectedTags={selectedTags}
-                            setSelectedTags={setSelectedTags}
-                            queryMode={queryMode}
-                            setQueryMode={setQueryMode}
-                            loadingTags={loadingTags}
-                            setLoadingTags={setLoadingTags}
-                            allTags={allTags}
-                            setAllTags={setAllTags}
-                            forceFetchTags={forceFetchTags}
-                            setForceFetchTags={setForceFetchTags}
-                            tagSearch={tagSearch}
-                            setTagSearch={setTagSearch}
-                            fetchAllTags={(force) => fetchAllTags(setAllTags, setLoadingTags, force)}
-                        />
+                        {/* Only show either the refresh button or the tag selector, never both */}
+                        {loadingTags ? (
+                            <div className="mb-4 w-full flex flex-row gap-2 items-center">
+                                <button
+                                    className="px-3 py-1 bg-gray-200 text-gray-700 rounded shadow hover:bg-gray-300 transition text-xs"
+                                    disabled
+                                    type="button"
+                                >
+                                    Refresh Tags
+                                </button>
+                                <span className="text-xs text-gray-400 ml-2">Loading...</span>
+                            </div>
+                        ) : (
+                            <TagSelector
+                                selectedTags={selectedTags}
+                                setSelectedTags={setSelectedTags}
+                                queryMode={queryMode}
+                                setQueryMode={setQueryMode}
+                                loadingTags={loadingTags}
+                                setLoadingTags={setLoadingTags}
+                                allTags={allTags}
+                                setAllTags={setAllTags}
+                                forceFetchTags={forceFetchTags}
+                                setForceFetchTags={setForceFetchTags}
+                                tagSearch={tagSearch}
+                                setTagSearch={setTagSearch}
+                                fetchAllTags={(force) => fetchAllTags(setAllTags, setLoadingTags, force)}
+                            />
+                        )}
                     </CollapsiblePanel>
                     <div className="flex-[2_2_0%] min-w-0 flex flex-col items-center justify-start p-4 bg-gray-50 rounded-lg shadow-md">
                         {/* Query button at the top */}
