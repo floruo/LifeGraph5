@@ -20,7 +20,7 @@ export const executeSparqlQuery = async (sparqlQuery) => {
 
 export const fetchAllTags = async (setAllTags, setLoadingTags, force = false) => {
     const cacheKey = 'allLscTags';
-    setLoadingTags(true); // Always set loading true at the start
+    setLoadingTags(true);
     try {
         if (force) {
             try {
@@ -69,7 +69,7 @@ export const fetchAllTags = async (setAllTags, setLoadingTags, force = false) =>
 
 export const fetchAllCountries = async (setAllCountries, setLoadingCountries, force = false) => {
     const cacheKey = 'allLscCountries';
-    setLoadingCountries(true); // Always set loading true at the start
+    setLoadingCountries(true);
     try {
         if (force) {
             try {
@@ -111,4 +111,53 @@ export const fetchAllCountries = async (setAllCountries, setLoadingCountries, fo
     } finally {
         setLoadingCountries(false);
     }
+};
+
+// Fetch and cache the day range, ensuring only one API call is made at a time
+let dayRangePromise = null;
+export const fetchDayRange = async (force = false) => {
+    const cacheKey = 'allLscDayRange';
+    if (!force) {
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+            try {
+                return JSON.parse(cached);
+            } catch (e) {
+                // ignore parse error, fall through to fetch
+            }
+        }
+        if (dayRangePromise) return dayRangePromise;
+    } else {
+        try {
+            localStorage.removeItem(cacheKey);
+        } catch (e) {
+            // ignore
+        }
+        dayRangePromise = null;
+    }
+    dayRangePromise = (async () => {
+        const query = `
+            SELECT (MIN(?date) AS ?minDate) (MAX(?date) AS ?maxDate)
+            WHERE {
+                ?s <http://lsc.dcu.ie/schema#day> ?date .
+            }
+        `;
+        const bindings = await executeSparqlQuery(query);
+        if (bindings.length > 0) {
+            const result = {
+                min: bindings[0].minDate.value.replace('http://lsc.dcu.ie/day#', ''),
+                max: bindings[0].maxDate.value.replace('http://lsc.dcu.ie/day#', ''),
+            };
+            try {
+                localStorage.setItem(cacheKey, JSON.stringify(result));
+            } catch (e) {
+                // ignore
+            }
+            dayRangePromise = null;
+            return result;
+        }
+        dayRangePromise = null;
+        return { min: '2019-01-01', max: '2019-12-31' };
+    })();
+    return dayRangePromise;
 };

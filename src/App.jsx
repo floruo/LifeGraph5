@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import TagSelector from './components/TagSelector';
 import CountrySelector from './components/CountrySelector';
-import { executeSparqlQuery, fetchAllTags, fetchAllCountries } from './utils/sparql';
+import DateSelector from './components/DateSelector.jsx';
+import { executeSparqlQuery, fetchAllTags, fetchAllCountries, fetchDayRange } from './utils/sparql';
 
 // CollapsiblePanel component for left/right columns
 const CollapsiblePanel = ({ title, children, defaultOpen = true, className = "" }) => {
@@ -56,6 +57,35 @@ const App = () => {
     // Collapsible state for SPARQL query
     const [showSparql, setShowSparql] = useState(false);
 
+    // Day selector state
+    const [minDay, setMinDay] = useState('2019-01-01');
+    const [maxDay, setMaxDay] = useState('2019-12-31');
+    const [startDay, setStartDay] = useState('2019-01-01');
+    const [endDay, setEndDay] = useState('2019-12-31');
+
+    // Checkbox state for including day in query
+    const [includeStartDay, setIncludeStartDay] = useState(false);
+    const [includeEndDay, setIncludeEndDay] = useState(false);
+
+    // State for force-refreshing day range
+    const [forceFetchDayRange, setForceFetchDayRange] = useState(false);
+
+    // State for loading day range
+    const [loadingDayRange, setLoadingDayRange] = useState(false);
+
+    // Fetch min/max day from SPARQL endpoint on mount or when forceFetchDayRange changes
+    useEffect(() => {
+        setLoadingDayRange(true);
+        fetchDayRange(forceFetchDayRange).then(({ min, max }) => {
+            setMinDay(min);
+            setMaxDay(max);
+            setStartDay(min);
+            setEndDay(max);
+            setLoadingDayRange(false);
+        });
+        if (forceFetchDayRange) setForceFetchDayRange(false);
+    }, [forceFetchDayRange]);
+
     // Ensure queryMode is reset to 'intersection' if only one or zero tags are selected
     useEffect(() => {
         if (selectedTags.length <= 1 && queryMode !== 'intersection') {
@@ -96,7 +126,7 @@ const App = () => {
 
     // Function to construct the SPARQL query for display and execution
     const getSparqlQuery = () => {
-        if (!selectedTags.length && !selectedCountry) return '';
+        if (!selectedTags.length && !selectedCountry && !includeStartDay && !includeEndDay) return '';
         let whereClauses = [];
         let prefixes = [];
         if (selectedTags.length) {
@@ -119,7 +149,22 @@ const App = () => {
             }
             whereClauses.push(`    ?s lsc:country "${selectedCountry.replace(/"/g, '\"')}" .`);
         }
-        // Ensure prefixes are in a consistent order: lsc, tag
+        if (includeStartDay || includeEndDay) {
+            if (!prefixes.includes('PREFIX lsc: <http://lsc.dcu.ie/schema#>')) {
+                prefixes.push('PREFIX lsc: <http://lsc.dcu.ie/schema#>');
+            }
+            prefixes.push('PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>');
+            whereClauses.push('    ?s lsc:day ?day .');
+            whereClauses.push('    BIND(xsd:date(STRAFTER(STR(?day), "#")) AS ?dayDate )')
+            if (includeStartDay && includeEndDay) {
+                whereClauses.push(`    FILTER (?dayDate >= "${startDay}"^^xsd:date && ?dayDate <= "${endDay}"^^xsd:date)`);
+            } else if (includeStartDay) {
+                whereClauses.push(`    FILTER (?dayDate >= "${startDay}"^^xsd:date)`);
+            } else if (includeEndDay) {
+                whereClauses.push(`    FILTER (?dayDate <= "${endDay}"^^xsd:date)`);
+            }
+        }
+        // Ensure prefixes are in a consistent order: lsc, tag, day
         prefixes = prefixes.sort((a, b) => a.localeCompare(b));
         return [
             ...prefixes,
@@ -131,9 +176,27 @@ const App = () => {
         ].join('\n');
     };
 
+    // useEffect to clear filters on initial mount
+    useEffect(() => {
+        setSelectedTags([]);
+        setSelectedCountry('');
+        setTagSearch('');
+        setCountrySearch('');
+        setStartDay(minDay);
+        setEndDay(maxDay);
+        setIncludeStartDay(false);
+        setIncludeEndDay(false);
+        setImageUris([]);
+        setError(null);
+        setQueryTime(null);
+    }, []);
+
     // useEffect to trigger the fetch function whenever 'triggerFetch' state changes
     useEffect(() => {
-        fetchImageUris();
+        // Only fetch if this is not the initial mount
+        if (triggerFetch > 0) {
+            fetchImageUris();
+        }
         // eslint-disable-next-line
     }, [triggerFetch]);
 
@@ -175,16 +238,34 @@ const App = () => {
 
     // Handler for search button click
     const handleSearchClick = () => {
-        // Only trigger fetch if at least one tag or a country is selected and all tags are valid
-        if ((selectedTags.length > 0 && selectedTags.every(tag =>
+        // Only trigger fetch if at least one tag, a country, or a date range is selected and all tags are valid
+        const hasValidTags = selectedTags.length > 0 && selectedTags.every(tag =>
             allTags.map(t => t.toLowerCase()).includes(tag.toLowerCase())
-        )) || selectedCountry) {
+        );
+        const hasCountry = !!selectedCountry;
+        const hasDateRange = !!includeStartDay || !!includeEndDay;
+        if (hasValidTags || hasCountry || hasDateRange) {
             setTriggerFetch(prev => prev + 1);
         }
     };
 
     // Add a handler to clear the displayed results
     const handleClearResults = () => {
+        setImageUris([]);
+        setError(null);
+        setQueryTime(null);
+    };
+
+    // Add a handler to clear all query filters
+    const handleClearFilters = () => {
+        setSelectedTags([]);
+        setSelectedCountry('');
+        setTagSearch('');
+        setCountrySearch('');
+        setStartDay(minDay);
+        setEndDay(maxDay);
+        setIncludeStartDay(false);
+        setIncludeEndDay(false);
         setImageUris([]);
         setError(null);
         setQueryTime(null);
@@ -198,7 +279,15 @@ const App = () => {
                 </h1>
                 <div className="flex flex-row items-start gap-8">
                     <div className="flex flex-col gap-6 max-w-xs w-full">
-                        <CollapsiblePanel title="Tag Search" defaultOpen={false}>
+                        <button
+                            className="mb-2 px-3 py-1 bg-gray-200 text-gray-700 rounded shadow hover:bg-gray-300 transition text-xs self-end"
+                            onClick={handleClearFilters}
+                            disabled={loading}
+                            type="button"
+                        >
+                            Clear Filters
+                        </button>
+                        <CollapsiblePanel title="Tag Filter" defaultOpen={false}>
                             <TagSelector
                                 selectedTags={selectedTags}
                                 setSelectedTags={setSelectedTags}
@@ -215,7 +304,7 @@ const App = () => {
                                 fetchAllTags={(force) => fetchAllTags(setAllTags, setLoadingTags, force)}
                             />
                         </CollapsiblePanel>
-                        <CollapsiblePanel title="Country Search" defaultOpen={false}>
+                        <CollapsiblePanel title="Country Filter" defaultOpen={false}>
                             <CountrySelector
                                 selectedCountry={selectedCountry}
                                 setSelectedCountry={setSelectedCountry}
@@ -230,6 +319,22 @@ const App = () => {
                                 fetchAllCountries={(force) => fetchAllCountries(setAllCountries, setLoadingCountries, force)}
                             />
                         </CollapsiblePanel>
+                        <CollapsiblePanel title="Date Filter" defaultOpen={false}>
+                            <DateSelector
+                                minDate={minDay}
+                                maxDate={maxDay}
+                                startDate={startDay}
+                                endDate={endDay}
+                                setStartDate={setStartDay}
+                                setEndDate={setEndDay}
+                                includeStartDay={includeStartDay}
+                                setIncludeStartDay={setIncludeStartDay}
+                                includeEndDay={includeEndDay}
+                                setIncludeEndDay={setIncludeEndDay}
+                                onRefreshDayRange={() => setForceFetchDayRange(true)}
+                                onDayChange={() => setTriggerFetch(prev => prev + 1)}
+                            />
+                        </CollapsiblePanel>
                     </div>
                     <div className="flex-1 min-w-0 flex flex-col items-center justify-start p-4 bg-gray-50 rounded-lg shadow-md">
                         {/* Query area at the top */}
@@ -237,7 +342,16 @@ const App = () => {
                             <button
                                 onClick={handleSearchClick}
                                 className="mb-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-md shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-150 ease-in-out w-full max-w-xs"
-                                disabled={loadingTags || loading || (selectedTags.length === 0 && !selectedCountry)}
+                                disabled={
+                                    loadingTags ||
+                                    loading ||
+                                    (
+                                        selectedTags.length === 0 &&
+                                        !selectedCountry &&
+                                        !includeStartDay &&
+                                        !includeEndDay
+                                    )
+                                }
                             >
                                 {loadingTags ? "Loading..." : "Query"}
                             </button>
