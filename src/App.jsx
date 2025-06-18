@@ -111,24 +111,24 @@ const App = () => {
         if (!selectedTags.length) return '';
         if (queryMode === 'intersection') {
             const tagFilters = selectedTags
-                .map(tag => `?s <http://lsc.dcu.ie/schema#tag> <http://lsc.dcu.ie/tag#${tag.replace(/"/g, '\\"')}> .`)
+                .map(tag => `    ?s <http://lsc.dcu.ie/schema#tag> <http://lsc.dcu.ie/tag#${tag.replace(/"/g, '\\"')}> .`)
                 .join('\n');
-            return `
-SELECT DISTINCT ?s
-WHERE {
-${tagFilters}
-}
-            `.trim();
+            return [
+                'SELECT DISTINCT ?s',
+                'WHERE {',
+                tagFilters,
+                '}'
+            ].join('\n');
         } else {
             const unionFilters = selectedTags
-                .map(tag => `{ ?s <http://lsc.dcu.ie/schema#tag> <http://lsc.dcu.ie/tag#${tag.replace(/"/g, '\\"')}> }`)
-                .join(' UNION ');
-            return `
-SELECT DISTINCT ?s
-WHERE {
-${unionFilters}
-}
-            `.trim();
+                .map(tag => `    { ?s <http://lsc.dcu.ie/schema#tag> <http://lsc.dcu.ie/tag#${tag.replace(/"/g, '\\"')}> . }`)
+                .join('\n    UNION\n');
+            return [
+                'SELECT DISTINCT ?s',
+                'WHERE {',
+                unionFilters,
+                '}'
+            ].join('\n');
         }
     };
 
@@ -198,21 +198,35 @@ ${unionFilters}
                                 <span className="text-xs text-gray-400 ml-2">Loading...</span>
                             </div>
                         ) : (
-                            <TagSelector
-                                selectedTags={selectedTags}
-                                setSelectedTags={setSelectedTags}
-                                queryMode={queryMode}
-                                setQueryMode={setQueryMode}
-                                loadingTags={loadingTags}
-                                setLoadingTags={setLoadingTags}
-                                allTags={allTags}
-                                setAllTags={setAllTags}
-                                forceFetchTags={forceFetchTags}
-                                setForceFetchTags={setForceFetchTags}
-                                tagSearch={tagSearch}
-                                setTagSearch={setTagSearch}
-                                fetchAllTags={(force) => fetchAllTags(setAllTags, setLoadingTags, force)}
-                            />
+                            <>
+                                <TagSelector
+                                    selectedTags={selectedTags}
+                                    setSelectedTags={setSelectedTags}
+                                    queryMode={queryMode}
+                                    setQueryMode={setQueryMode}
+                                    loadingTags={loadingTags}
+                                    setLoadingTags={setLoadingTags}
+                                    allTags={allTags}
+                                    setAllTags={setAllTags}
+                                    forceFetchTags={forceFetchTags}
+                                    setForceFetchTags={setForceFetchTags}
+                                    tagSearch={tagSearch}
+                                    setTagSearch={setTagSearch}
+                                    fetchAllTags={(force) => fetchAllTags(setAllTags, setLoadingTags, force)}
+                                />
+                                {/* Clear tags button */}
+                                {selectedTags.length > 0 && (
+                                    <div className="mb-4 w-full flex flex-row justify-end">
+                                        <button
+                                            className="px-3 py-1 bg-red-100 text-red-700 rounded shadow hover:bg-red-200 transition text-xs"
+                                            onClick={() => setSelectedTags([])}
+                                            type="button"
+                                        >
+                                            Clear Tags
+                                        </button>
+                                    </div>
+                                )}
+                            </>
                         )}
                     </CollapsiblePanel>
                     <div className="flex-[2_2_0%] min-w-0 flex flex-col items-center justify-start p-4 bg-gray-50 rounded-lg shadow-md">
