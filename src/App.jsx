@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import TagSelector from './components/TagSelector';
 import CountrySelector from './components/CountrySelector';
 import DateSelector from './components/DateSelector.jsx';
+import WeekdaySelector from './components/WeekdaySelector';
 import { executeSparqlQuery, fetchAllTags, fetchAllCountries, fetchDayRange } from './utils/sparql';
 
 // CollapsiblePanel component for left/right columns
@@ -73,6 +74,12 @@ const App = () => {
     // State for loading day range
     const [loadingDayRange, setLoadingDayRange] = useState(false);
 
+    // State for day-of-week filter
+    const [selectedWeekdays, setSelectedWeekdays] = useState([]); // e.g., ['Monday', 'Tuesday']
+
+    // State for weekday range selection
+    const [weekdayRange, setWeekdayRange] = useState([null, null]);
+
     // Fetch min/max day from SPARQL endpoint on mount or when forceFetchDayRange changes
     useEffect(() => {
         setLoadingDayRange(true);
@@ -126,7 +133,16 @@ const App = () => {
 
     // Function to construct the SPARQL query for display and execution
     const getSparqlQuery = () => {
-        if (!selectedTags.length && !selectedCountry && !includeStartDay && !includeEndDay) return '';
+        // If no filters are selected, return an empty string
+        if (
+            selectedTags.length === 0 &&
+            !selectedCountry &&
+            !includeStartDay &&
+            !includeEndDay &&
+            selectedWeekdays.length === 0
+        ) {
+            return '';
+        }
         let whereClauses = [];
         let prefixes = [];
         if (selectedTags.length) {
@@ -149,13 +165,14 @@ const App = () => {
             }
             whereClauses.push(`    ?s lsc:country "${selectedCountry.replace(/"/g, '\"')}" .`);
         }
+        // Date filter
         if (includeStartDay || includeEndDay) {
             if (!prefixes.includes('PREFIX lsc: <http://lsc.dcu.ie/schema#>')) {
                 prefixes.push('PREFIX lsc: <http://lsc.dcu.ie/schema#>');
             }
             prefixes.push('PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>');
             whereClauses.push('    ?s lsc:day ?day .');
-            whereClauses.push('    BIND(xsd:date(STRAFTER(STR(?day), "#")) AS ?dayDate )')
+            whereClauses.push('    BIND(xsd:date(STRAFTER(STR(?day), "#")) AS ?dayDate )');
             if (includeStartDay && includeEndDay) {
                 whereClauses.push(`    FILTER (?dayDate >= "${startDay}"^^xsd:date && ?dayDate <= "${endDay}"^^xsd:date)`);
             } else if (includeStartDay) {
@@ -164,11 +181,40 @@ const App = () => {
                 whereClauses.push(`    FILTER (?dayDate <= "${endDay}"^^xsd:date)`);
             }
         }
-        // Ensure prefixes are in a consistent order: lsc, tag, day
+        // Weekday filter (independent)
+        if (selectedWeekdays.length > 0) {
+            if (!prefixes.includes('PREFIX lsc: <http://lsc.dcu.ie/schema#>')) {
+                prefixes.push('PREFIX lsc: <http://lsc.dcu.ie/schema#>');
+            }
+            if (!prefixes.includes('PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>')) {
+                prefixes.push('PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>');
+            }
+            if (!prefixes.includes('PREFIX megras: <http://megras.org/sparql#>')) {
+                prefixes.push('PREFIX megras: <http://megras.org/sparql#>');
+            }
+            if (!whereClauses.includes('    ?s lsc:day ?day .')) {
+                whereClauses.push('    ?s lsc:day ?day .');
+            }
+            if (!whereClauses.includes('    BIND(xsd:date(STRAFTER(STR(?day), "#")) AS ?dayDate )')) {
+                whereClauses.push('    BIND(xsd:date(STRAFTER(STR(?day), "#")) AS ?dayDate )');
+            }
+            // Map weekdays to numbers (1-7) for DAYOFWEEK function according to ISO
+            const weekdayMap = {
+                'Monday': 1,
+                'Tuesday': 2,
+                'Wednesday': 3,
+                'Thursday': 4,
+                'Friday': 5,
+                'Saturday': 6,
+                'Sunday': 7
+            };
+            const selectedNumbers = selectedWeekdays.map(day => weekdayMap[day]);
+            whereClauses.push(`    FILTER (megras:DAYOFWEEK(?dayDate) IN (${selectedNumbers.join(", ")}))`);
+        }
         prefixes = prefixes.sort((a, b) => a.localeCompare(b));
         return [
             ...prefixes,
-            '', // empty line between prefixes and SELECT
+            '',
             'SELECT DISTINCT ?s',
             'WHERE {',
             whereClauses.join('\n'),
@@ -186,17 +232,17 @@ const App = () => {
         setEndDay(maxDay);
         setIncludeStartDay(false);
         setIncludeEndDay(false);
+        setSelectedWeekdays([]);
+        setWeekdayRange([null, null]);
         setImageUris([]);
         setError(null);
         setQueryTime(null);
+        // Do not trigger fetch on mount
     }, []);
 
     // useEffect to trigger the fetch function whenever 'triggerFetch' state changes
     useEffect(() => {
-        // Only fetch if this is not the initial mount
-        if (triggerFetch > 0) {
-            fetchImageUris();
-        }
+        fetchImageUris();
         // eslint-disable-next-line
     }, [triggerFetch]);
 
@@ -238,15 +284,8 @@ const App = () => {
 
     // Handler for search button click
     const handleSearchClick = () => {
-        // Only trigger fetch if at least one tag, a country, or a date range is selected and all tags are valid
-        const hasValidTags = selectedTags.length > 0 && selectedTags.every(tag =>
-            allTags.map(t => t.toLowerCase()).includes(tag.toLowerCase())
-        );
-        const hasCountry = !!selectedCountry;
-        const hasDateRange = !!includeStartDay || !!includeEndDay;
-        if (hasValidTags || hasCountry || hasDateRange) {
-            setTriggerFetch(prev => prev + 1);
-        }
+        // Always trigger fetch, regardless of filter state
+        setTriggerFetch(prev => prev + 1);
     };
 
     // Add a handler to clear the displayed results
@@ -266,10 +305,13 @@ const App = () => {
         setEndDay(maxDay);
         setIncludeStartDay(false);
         setIncludeEndDay(false);
+        setSelectedWeekdays([]);
+        setWeekdayRange([null, null]);
         setImageUris([]);
         setError(null);
         setQueryTime(null);
     };
+
 
     return (
         <div className="min-h-screen bg-gray-100 flex flex-col items-center p-4 font-inter">
@@ -335,6 +377,14 @@ const App = () => {
                                 onDayChange={() => setTriggerFetch(prev => prev + 1)}
                             />
                         </CollapsiblePanel>
+                        <CollapsiblePanel title="Weekday Filter" defaultOpen={false}>
+                            <WeekdaySelector
+                                selectedWeekdays={selectedWeekdays}
+                                setSelectedWeekdays={setSelectedWeekdays}
+                                weekdayRange={weekdayRange}
+                                setWeekdayRange={setWeekdayRange}
+                            />
+                        </CollapsiblePanel>
                     </div>
                     <div className="flex-1 min-w-0 flex flex-col items-center justify-start p-4 bg-gray-50 rounded-lg shadow-md">
                         {/* Query area at the top */}
@@ -346,10 +396,7 @@ const App = () => {
                                     loadingTags ||
                                     loading ||
                                     (
-                                        selectedTags.length === 0 &&
-                                        !selectedCountry &&
-                                        !includeStartDay &&
-                                        !includeEndDay
+                                        !getSparqlQuery()
                                     )
                                 }
                             >
