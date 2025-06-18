@@ -172,6 +172,13 @@ const App = () => {
         }
     };
 
+    // Add a handler to clear the displayed results
+    const handleClearResults = () => {
+        setImageUris([]);
+        setError(null);
+        setQueryTime(null);
+    };
+
     return (
         <div className="min-h-screen bg-gray-100 flex flex-col items-center p-4 font-inter">
             <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-6xl">
@@ -223,9 +230,19 @@ const App = () => {
                             {loadingTags ? "Loading..." : "Query"}
                         </button>
                         {/* Show count of results at the top */}
-                        <div className="w-full mb-4 text-lg font-semibold text-gray-700 text-center">
+                        <div className="w-full mb-4 text-lg font-semibold text-gray-700 text-center flex items-center justify-center gap-4">
                             {imageUris.length > 0 && !loading && !error && (
-                                <span>{imageUris.length} result{imageUris.length !== 1 ? 's' : ''} found</span>
+                                <>
+                                    <span>{imageUris.length} result{imageUris.length !== 1 ? 's' : ''} found</span>
+                                    <button
+                                        className="px-3 py-1 bg-red-100 text-red-700 rounded shadow hover:bg-red-200 transition text-xs"
+                                        onClick={handleClearResults}
+                                        disabled={loading}
+                                        type="button"
+                                    >
+                                        Clear Results
+                                    </button>
+                                </>
                             )}
                         </div>
                         {/* Show query execution time */}
