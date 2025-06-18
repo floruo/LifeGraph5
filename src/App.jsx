@@ -53,6 +53,9 @@ const App = () => {
     const [queryTime, setQueryTime] = useState(null);
     const [forceFetchTags, setForceFetchTags] = useState(false);
 
+    // Collapsible state for SPARQL query
+    const [showSparql, setShowSparql] = useState(false);
+
     // Ensure queryMode is reset to 'intersection' if only one or zero tags are selected
     useEffect(() => {
         if (selectedTags.length <= 1 && queryMode !== 'intersection') {
@@ -95,7 +98,10 @@ const App = () => {
     const getSparqlQuery = () => {
         if (!selectedTags.length && !selectedCountry) return '';
         let whereClauses = [];
+        let prefixes = [];
         if (selectedTags.length) {
+            prefixes.push('PREFIX tag: <http://lsc.dcu.ie/tag#>');
+            prefixes.push('PREFIX lsc: <http://lsc.dcu.ie/schema#>');
             if (queryMode === 'intersection') {
                 whereClauses = [
                     ...selectedTags.map(tag => `    ?s lsc:tag tag:${tag.replace(/"/g, '\"')} . `)
@@ -108,11 +114,16 @@ const App = () => {
             }
         }
         if (selectedCountry) {
+            if (!prefixes.includes('PREFIX lsc: <http://lsc.dcu.ie/schema#>')) {
+                prefixes.push('PREFIX lsc: <http://lsc.dcu.ie/schema#>');
+            }
             whereClauses.push(`    ?s lsc:country "${selectedCountry.replace(/"/g, '\"')}" .`);
         }
+        // Ensure prefixes are in a consistent order: lsc, tag
+        prefixes = prefixes.sort((a, b) => a.localeCompare(b));
         return [
-            'PREFIX lsc: <http://lsc.dcu.ie/schema#>',
-            'PREFIX tag: <http://lsc.dcu.ie/tag#>',
+            ...prefixes,
+            '', // empty line between prefixes and SELECT
             'SELECT DISTINCT ?s',
             'WHERE {',
             whereClauses.join('\n'),
@@ -181,13 +192,13 @@ const App = () => {
 
     return (
         <div className="min-h-screen bg-gray-100 flex flex-col items-center p-4 font-inter">
-            <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-6xl">
+            <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-7xl">
                 <h1 className="text-3xl font-bold text-gray-800 mb-6 text-center">
                     LifeGraph 5
                 </h1>
-                <div className="flex flex-row items-start gap-12">
-                    <div className="flex flex-col gap-6">
-                        <CollapsiblePanel title="Tag Search">
+                <div className="flex flex-row items-start gap-8">
+                    <div className="flex flex-col gap-6 max-w-xs w-full">
+                        <CollapsiblePanel title="Tag Search" defaultOpen={false}>
                             <TagSelector
                                 selectedTags={selectedTags}
                                 setSelectedTags={setSelectedTags}
@@ -204,7 +215,7 @@ const App = () => {
                                 fetchAllTags={(force) => fetchAllTags(setAllTags, setLoadingTags, force)}
                             />
                         </CollapsiblePanel>
-                        <CollapsiblePanel title="Country Search">
+                        <CollapsiblePanel title="Country Search" defaultOpen={false}>
                             <CountrySelector
                                 selectedCountry={selectedCountry}
                                 setSelectedCountry={setSelectedCountry}
@@ -220,81 +231,89 @@ const App = () => {
                             />
                         </CollapsiblePanel>
                     </div>
-                    <div className="flex-[2_2_0%] min-w-0 flex flex-col items-center justify-start p-4 bg-gray-50 rounded-lg shadow-md">
-                        {/* Query button at the top */}
-                        <button
-                            onClick={handleSearchClick}
-                            className="mb-6 px-6 py-3 bg-blue-600 text-white font-semibold rounded-md shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-150 ease-in-out w-full max-w-xs"
-                            disabled={loadingTags || loading || (selectedTags.length === 0 && !selectedCountry)}
-                        >
-                            {loadingTags ? "Loading..." : "Query"}
-                        </button>
-                        {/* Show count of results at the top */}
-                        <div className="w-full mb-4 text-lg font-semibold text-gray-700 text-center flex items-center justify-center gap-4">
-                            {imageUris.length > 0 && !loading && !error && (
-                                <>
-                                    <span>{imageUris.length} result{imageUris.length !== 1 ? 's' : ''} found</span>
-                                    <button
-                                        className="px-3 py-1 bg-red-100 text-red-700 rounded shadow hover:bg-red-200 transition text-xs"
-                                        onClick={handleClearResults}
-                                        disabled={loading}
-                                        type="button"
-                                    >
-                                        Clear Results
-                                    </button>
-                                </>
-                            )}
-                        </div>
-                        {/* Show query execution time */}
-                        {queryTime !== null && !loading && !error && (
-                            <div className="w-full mb-4 text-sm text-gray-500 text-center">
-                                Query executed in {(queryTime / 1000).toFixed(1)}s
-                            </div>
-                        )}
-                        {loading && (
-                            <div className="text-center text-blue-600">
-                                <p>Loading image URIs for selected tags...</p>
-                                <div className="mt-4 animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mx-auto"></div>
-                            </div>
-                        )}
-
-                        {error && imageUris.length > 0 && (
-                            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-                                <strong className="font-bold">Error!</strong>
-                                <span className="block sm:inline"> {error}</span>
-                            </div>
-                        )}
-
-                        {!loading && !error && (
+                    <div className="flex-1 min-w-0 flex flex-col items-center justify-start p-4 bg-gray-50 rounded-lg shadow-md">
+                        {/* Query area at the top */}
+                        <div className="w-full flex flex-col items-center mb-6">
+                            <button
+                                onClick={handleSearchClick}
+                                className="mb-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-md shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-150 ease-in-out w-full max-w-xs"
+                                disabled={loadingTags || loading || (selectedTags.length === 0 && !selectedCountry)}
+                            >
+                                {loadingTags ? "Loading..." : "Query"}
+                            </button>
+                            {/* Collapsible SPARQL Query area */}
                             <div className="w-full">
-                                {imageUris.length > 0 ? (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                                        {imageUris.map((uri, index) => (
-                                            <div
-                                                key={index}
-                                                className="bg-gray-100 p-2 rounded-lg shadow flex justify-center items-center overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-200"
-                                                onClick={() => handleImageClick(uri)}
-                                            >
-                                                <span className="break-all text-xs text-blue-700 underline">{uri}</span>
-                                            </div>
-                                        ))}
+                                <button
+                                    className="flex items-center gap-2 text-xs text-blue-700 hover:underline focus:outline-none mb-1"
+                                    onClick={() => setShowSparql(v => !v)}
+                                    type="button"
+                                >
+                                    {showSparql ? '▼ Hide SPARQL Query' : '► Show SPARQL Query'}
+                                </button>
+                                {showSparql && (
+                                    <div className="w-full bg-white border border-gray-200 rounded p-2 mb-2 text-xs font-mono text-gray-700 whitespace-pre-wrap break-all">
+                                        {getSparqlQuery() || <span className="text-gray-400 italic">No query constructed.</span>}
                                     </div>
-                                ) : (
-                                    // Only show the "No image URIs found" message if tags are selected and a search was triggered
-                                    selectedTags.length > 0 && triggerFetch > 0
-                                        ? <p className="text-center text-gray-600 text-lg">No image URIs found for selected tags.</p>
-                                        : null
                                 )}
                             </div>
-                        )}
-                    </div>
-
-                    {/* Right: Collapsible Placeholder for future use */}
-                    <CollapsiblePanel title="SPARQL Query" defaultOpen={false}>
-                        <div className="w-full h-full flex items-start justify-center text-gray-700 font-mono text-xs whitespace-pre-wrap break-all">
-                            {getSparqlQuery() || <span className="text-gray-400 italic">No query constructed.</span>}
+                            <div className="w-full flex flex-row items-center justify-center gap-4 mb-2">
+                                {imageUris.length > 0 && !loading && !error && (
+                                    <>
+                                        <span className="text-lg font-semibold text-gray-700">{imageUris.length} result{imageUris.length !== 1 ? 's' : ''} found</span>
+                                        <button
+                                            className="px-3 py-1 bg-red-100 text-red-700 rounded shadow hover:bg-red-200 transition text-xs"
+                                            onClick={handleClearResults}
+                                            disabled={loading}
+                                            type="button"
+                                        >
+                                            Clear Results
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+                            {queryTime !== null && !loading && !error && (
+                                <div className="w-full mb-2 text-sm text-gray-500 text-center">
+                                    Query executed in {(queryTime / 1000).toFixed(1)}s
+                                </div>
+                            )}
                         </div>
-                    </CollapsiblePanel>
+                        {/* Results area below */}
+                        <div className="w-full flex-1">
+                            {loading && (
+                                <div className="text-center text-blue-600">
+                                    <p>Loading image URIs for selected tags...</p>
+                                    <div className="mt-4 animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mx-auto"></div>
+                                </div>
+                            )}
+                            {error && imageUris.length > 0 && (
+                                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+                                    <strong className="font-bold">Error!</strong>
+                                    <span className="block sm:inline"> {error}</span>
+                                </div>
+                            )}
+                            {!loading && !error && (
+                                <div className="w-full">
+                                    {imageUris.length > 0 ? (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                            {imageUris.map((uri, index) => (
+                                                <div
+                                                    key={index}
+                                                    className="bg-gray-100 p-2 rounded-lg shadow flex justify-center items-center overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-200"
+                                                    onClick={() => handleImageClick(uri)}
+                                                >
+                                                    <span className="break-all text-xs text-blue-700 underline">{uri}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        selectedTags.length > 0 && triggerFetch > 0
+                                            ? <p className="text-center text-gray-600 text-lg">No image URIs found for selected tags.</p>
+                                            : null
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </div>
             </div>
 
