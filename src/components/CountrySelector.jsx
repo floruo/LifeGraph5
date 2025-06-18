@@ -22,9 +22,13 @@ const CountrySelector = ({
         setSelectedCountry('');
     };
 
+    const handleClearCountry = () => {
+        setSelectedCountry('');
+    };
+
     const filteredCountries = allCountries.filter(
         c =>
-            c.includes(countrySearch) &&
+            c.toLowerCase().includes(countrySearch.toLowerCase()) &&
             c !== selectedCountry
     );
 
@@ -82,20 +86,30 @@ const CountrySelector = ({
             </div>
             {/* Display selected country */}
             {selectedCountry && (
-                <div className="mb-4 flex flex-wrap gap-2">
-                    <span
-                        className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs flex items-center"
-                    >
-                        {selectedCountry}
-                        <button
-                            className="ml-2 text-blue-500 hover:text-red-600 font-bold"
-                            onClick={handleRemoveCountry}
-                            title="Remove country"
-                            type="button"
+                <div className="mb-4 flex flex-wrap gap-2 items-center">
+                    <div className="flex flex-wrap gap-2 flex-1">
+                        <span
+                            className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs flex items-center"
                         >
-                            &times;
-                        </button>
-                    </span>
+                            {selectedCountry}
+                            <button
+                                className="ml-2 text-blue-500 hover:text-red-600 font-bold"
+                                onClick={handleRemoveCountry}
+                                title="Remove country"
+                                type="button"
+                            >
+                                &times;
+                            </button>
+                        </span>
+                    </div>
+                    <button
+                        className="ml-auto px-2 py-1 bg-red-100 text-red-700 rounded shadow hover:bg-red-200 transition text-xs"
+                        onClick={handleClearCountry}
+                        type="button"
+                        title="Clear country"
+                    >
+                        Clear Country
+                    </button>
                 </div>
             )}
         </>

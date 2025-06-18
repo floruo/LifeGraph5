@@ -27,6 +27,10 @@ const TagSelector = ({
         setSelectedTags(selectedTags.filter(t => t !== tagToRemove));
     };
 
+    const handleClearTags = () => {
+        setSelectedTags([]);
+    };
+
     const filteredTags = allTags.filter(
         t =>
             t.toLowerCase().includes(tagSearch) &&
@@ -106,28 +110,41 @@ const TagSelector = ({
                     </button>
                 </div>
             )}
-            {/* Display selected tags as a set */}
-            <div className="mb-4 flex flex-wrap gap-2">
-                {selectedTags.map((t) => (
-                    <span
-                        key={t}
-                        className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs flex items-center"
-                    >
-                        {t.replace(/_/g, ' ').toLowerCase()}
+            {/* Display selected tags as a set with clear button always at top right */}
+            <div className="mb-4 w-full flex flex-col">
+                <div className="flex flex-row justify-between items-start w-full">
+                    <div className="flex flex-wrap gap-2 flex-1">
+                        {selectedTags.map((t) => (
+                            <span
+                                key={t}
+                                className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs flex items-center"
+                            >
+                                {t.replace(/_/g, ' ').toLowerCase()}
+                                <button
+                                    className="ml-2 text-blue-500 hover:text-red-600 font-bold"
+                                    onClick={() => handleRemoveTag(t)}
+                                    title="Remove tag"
+                                    type="button"
+                                >
+                                    &times;
+                                </button>
+                            </span>
+                        ))}
+                    </div>
+                    {selectedTags.length > 0 && (
                         <button
-                            className="ml-2 text-blue-500 hover:text-red-600 font-bold"
-                            onClick={() => handleRemoveTag(t)}
-                            title="Remove tag"
+                            className="ml-2 px-2 py-1 bg-red-100 text-red-700 rounded shadow hover:bg-red-200 transition text-xs"
+                            onClick={handleClearTags}
                             type="button"
+                            title="Clear all tags"
                         >
-                            &times;
+                            Clear Tags
                         </button>
-                    </span>
-                ))}
+                    )}
+                </div>
             </div>
         </>
     );
 };
 
 export default TagSelector;
-
