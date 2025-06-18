@@ -20,27 +20,29 @@ export const executeSparqlQuery = async (sparqlQuery) => {
 
 export const fetchAllTags = async (setAllTags, setLoadingTags, force = false) => {
     const cacheKey = 'allLscTags';
-    if (!force) {
-        try {
+    setLoadingTags(true); // Always set loading true at the start
+    try {
+        if (force) {
+            try {
+                localStorage.removeItem(cacheKey);
+            } catch (e) {
+                console.error('Could not remove tags from localStorage:', e);
+            }
+        } else {
             const cachedTags = localStorage.getItem(cacheKey);
             if (cachedTags) {
                 const tags = JSON.parse(cachedTags).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
                 setAllTags(tags);
-                setLoadingTags(false);
                 return;
             }
-        } catch (e) {
-            console.error('Could not access localStorage:', e);
         }
-    }
-    const tagsQuery = `
-        SELECT DISTINCT ?tag
-        WHERE {
-            ?s <http://lsc.dcu.ie/schema#tag> ?tag .
-        }
-    `;
-    try {
-        setLoadingTags(true);
+        const tagsQuery = `
+            SELECT DISTINCT ?tag
+            WHERE {
+                ?s <http://lsc.dcu.ie/schema#tag> ?tag .
+            }
+        `;
+        console.log("Fetching tags from SPARQL endpoint...");
         const bindings = await executeSparqlQuery(tagsQuery);
         const tags = bindings
             .map(binding => {
@@ -67,35 +69,34 @@ export const fetchAllTags = async (setAllTags, setLoadingTags, force = false) =>
 
 export const fetchAllCountries = async (setAllCountries, setLoadingCountries, force = false) => {
     const cacheKey = 'allLscCountries';
-    if (!force) {
-        try {
+    setLoadingCountries(true); // Always set loading true at the start
+    try {
+        if (force) {
+            try {
+                localStorage.removeItem(cacheKey);
+            } catch (e) {
+                console.error('Could not remove countries from localStorage:', e);
+            }
+        } else {
             const cachedCountries = localStorage.getItem(cacheKey);
             if (cachedCountries) {
                 const countries = JSON.parse(cachedCountries).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
                 setAllCountries(countries);
-                setLoadingCountries(false);
                 return;
             }
-        } catch (e) {
-            console.error('Could not access localStorage:', e);
         }
-    }
-    const countriesQuery = `
-        SELECT DISTINCT ?country
-        WHERE {
-            ?s <http://lsc.dcu.ie/schema#country> ?country .
-        }
-    `;
-    try {
-        setLoadingCountries(true);
+        const countriesQuery = `
+            SELECT DISTINCT ?country
+            WHERE {
+                ?s <http://lsc.dcu.ie/schema#country> ?country .
+            }
+        `;
         const bindings = await executeSparqlQuery(countriesQuery);
         const countries = bindings
             .map(binding => {
                 const fullCountry = binding.country?.value;
                 if (!fullCountry) return null;
-                const idx = fullCountry.indexOf('http://lsc.dcu.ie/country#');
-                const countryName = idx !== -1 ? fullCountry.substring('http://lsc.dcu.ie/country#'.length) : fullCountry;
-                return countryName;
+                return fullCountry;
             })
             .filter(Boolean)
             .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));

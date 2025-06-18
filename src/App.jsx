@@ -265,7 +265,7 @@ const App = () => {
                                 ) : (
                                     // Only show the "No image URIs found" message if tags are selected and a search was triggered
                                     selectedTags.length > 0 && triggerFetch > 0
-                                        ? <p className="text-center text-gray-600 text-lg">No image URIs found for selected tags. Please check your SPARQL endpoint and query.</p>
+                                        ? <p className="text-center text-gray-600 text-lg">No image URIs found for selected tags.</p>
                                         : null
                                 )}
                             </div>
