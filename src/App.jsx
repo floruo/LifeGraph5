@@ -162,105 +162,78 @@ const App = () => {
         }
         let whereClauses = [];
         let prefixes = [];
+        // Tag filter block
         if (selectedTags.length) {
             prefixes.push('PREFIX tag: <http://lsc.dcu.ie/tag#>');
             prefixes.push('PREFIX lsc: <http://lsc.dcu.ie/schema#>');
             if (queryMode === 'intersection') {
-                whereClauses = [
-                    ...selectedTags.map(tag => `    ?s lsc:tag tag:${tag.replace(/"/g, '\"')} . `)
-                ];
+                whereClauses.push(`  {\n${selectedTags.map(tag => `    ?s lsc:tag tag:${tag.replace(/"/g, '\"')} . `).join('\n')}\n  }`);
             } else {
                 const unionFilters = selectedTags
                     .map(tag => `    { ?s lsc:tag tag:${tag.replace(/"/g, '\"')} . }`)
                     .join('\n    UNION\n');
-                whereClauses = [unionFilters];
+                whereClauses.push(`  {\n${unionFilters}\n  }`);
             }
         }
+        // Country filter block
         if (selectedCountry) {
             if (!prefixes.includes('PREFIX lsc: <http://lsc.dcu.ie/schema#>')) {
                 prefixes.push('PREFIX lsc: <http://lsc.dcu.ie/schema#>');
             }
-            whereClauses.push(`    ?s lsc:country "${selectedCountry.replace(/"/g, '\"')}" .`);
+            whereClauses.push(`  {\n    ?s lsc:country \"${selectedCountry.replace(/"/g, '\"')}\" .\n  }`);
         }
-        // Date filter
-        if (includeStartDay || includeEndDay) {
-            if (!prefixes.includes('PREFIX lsc: <http://lsc.dcu.ie/schema#>')) {
-                prefixes.push('PREFIX lsc: <http://lsc.dcu.ie/schema#>');
-            }
-            prefixes.push('PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>');
-            whereClauses.push('    ?s lsc:day ?day .');
-            whereClauses.push('    BIND(xsd:date(STRAFTER(STR(?day), "#")) AS ?dayDate)');
-            if (includeStartDay && includeEndDay) {
-                whereClauses.push(`    FILTER (?dayDate >= "${startDay}"^^xsd:date && ?dayDate <= "${endDay}"^^xsd:date)`);
-            } else if (includeStartDay) {
-                whereClauses.push(`    FILTER (?dayDate >= "${startDay}"^^xsd:date)`);
-            } else if (includeEndDay) {
-                whereClauses.push(`    FILTER (?dayDate <= "${endDay}"^^xsd:date)`);
-            }
-        }
-        // Weekday filter (independent)
-        if (selectedWeekdays.length > 0) {
+        // Date, Year, Month, Weekday: group in one block
+        if (
+            includeStartDay || includeEndDay ||
+            selectedWeekdays.length > 0 ||
+            selectedYears.length > 0 ||
+            selectedMonths.length > 0
+        ) {
             if (!prefixes.includes('PREFIX lsc: <http://lsc.dcu.ie/schema#>')) {
                 prefixes.push('PREFIX lsc: <http://lsc.dcu.ie/schema#>');
             }
             if (!prefixes.includes('PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>')) {
                 prefixes.push('PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>');
             }
-            if (!prefixes.includes('PREFIX megras: <http://megras.org/sparql#>')) {
+            if (selectedWeekdays.length > 0 && !prefixes.includes('PREFIX megras: <http://megras.org/sparql#>')) {
                 prefixes.push('PREFIX megras: <http://megras.org/sparql#>');
             }
-            if (!whereClauses.includes('    ?s lsc:day ?day .')) {
-                whereClauses.push('    ?s lsc:day ?day .');
+            let dateBlock = [
+                '    ?s lsc:day ?day .',
+                '    BIND(xsd:date(STRAFTER(STR(?day), "#")) AS ?dayDate)'
+            ];
+            // Date range
+            if (includeStartDay && includeEndDay) {
+                dateBlock.push(`    FILTER (?dayDate >= \"${startDay}\"^^xsd:date && ?dayDate <= \"${endDay}\"^^xsd:date)`);
+            } else if (includeStartDay) {
+                dateBlock.push(`    FILTER (?dayDate >= \"${startDay}\"^^xsd:date)`);
+            } else if (includeEndDay) {
+                dateBlock.push(`    FILTER (?dayDate <= \"${endDay}\"^^xsd:date)`);
             }
-            if (!whereClauses.includes('    BIND(xsd:date(STRAFTER(STR(?day), "#")) AS ?dayDate)')) {
-                whereClauses.push('    BIND(xsd:date(STRAFTER(STR(?day), "#")) AS ?dayDate)');
+            // Weekday
+            if (selectedWeekdays.length > 0) {
+                const weekdayMap = {
+                    'Monday': 1,
+                    'Tuesday': 2,
+                    'Wednesday': 3,
+                    'Thursday': 4,
+                    'Friday': 5,
+                    'Saturday': 6,
+                    'Sunday': 7
+                };
+                const selectedNumbers = selectedWeekdays.map(day => weekdayMap[day]);
+                dateBlock.push(`    FILTER (megras:DAYOFWEEK(?dayDate) IN (${selectedNumbers.join(", ")}))`);
             }
-            // Map weekdays to numbers (1-7) for DAYOFWEEK function according to ISO
-            const weekdayMap = {
-                'Monday': 1,
-                'Tuesday': 2,
-                'Wednesday': 3,
-                'Thursday': 4,
-                'Friday': 5,
-                'Saturday': 6,
-                'Sunday': 7
-            };
-            const selectedNumbers = selectedWeekdays.map(day => weekdayMap[day]);
-            whereClauses.push(`    FILTER (megras:DAYOFWEEK(?dayDate) IN (${selectedNumbers.join(", ")}))`);
-        }
-        // Year filter (independent)
-        if (selectedYears.length > 0) {
-            if (!prefixes.includes('PREFIX lsc: <http://lsc.dcu.ie/schema#>')) {
-                prefixes.push('PREFIX lsc: <http://lsc.dcu.ie/schema#>');
+            // Year
+            if (selectedYears.length > 0) {
+                const yearFilters = selectedYears.map(y => `YEAR(?dayDate) = ${y}`).join(' || ');
+                dateBlock.push(`    FILTER (${yearFilters})`);
             }
-            if (!prefixes.includes('PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>')) {
-                prefixes.push('PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>');
+            // Month
+            if (selectedMonths.length > 0) {
+                dateBlock.push(`    FILTER (MONTH(?dayDate) IN (${selectedMonths.join(", ")}))`);
             }
-            if (!whereClauses.includes('    ?s lsc:day ?day .')) {
-                whereClauses.push('    ?s lsc:day ?day .');
-            }
-            if (!whereClauses.includes('    BIND(xsd:date(STRAFTER(STR(?day), "#")) AS ?dayDate)')) {
-                whereClauses.push('    BIND(xsd:date(STRAFTER(STR(?day), "#")) AS ?dayDate)');
-            }
-            const yearFilters = selectedYears.map(y => `YEAR(?dayDate) = ${y}`).join(' || ');
-            whereClauses.push(`    FILTER (${yearFilters})`);
-        }
-        // Month filter (independent)
-        if (selectedMonths.length > 0) {
-            if (!prefixes.includes('PREFIX lsc: <http://lsc.dcu.ie/schema#>')) {
-                prefixes.push('PREFIX lsc: <http://lsc.dcu.ie/schema#>');
-            }
-            if (!prefixes.includes('PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>')) {
-                prefixes.push('PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>');
-            }
-            if (!whereClauses.includes('    ?s lsc:day ?day .')) {
-                whereClauses.push('    ?s lsc:day ?day .');
-            }
-            if (!whereClauses.includes('    BIND(xsd:date(STRAFTER(STR(?day), "#")) AS ?dayDate)')) {
-                whereClauses.push('    BIND(xsd:date(STRAFTER(STR(?day), "#")) AS ?dayDate)');
-            }
-            // Use IN list expression for months
-            whereClauses.push(`    FILTER (MONTH(?dayDate) IN (${selectedMonths.join(", ")}))`);
+            whereClauses.push(`  {\n${dateBlock.join('\n')}\n  }`);
         }
         prefixes = prefixes.sort((a, b) => a.localeCompare(b));
         return [
@@ -374,14 +347,16 @@ const App = () => {
                 </h1>
                 <div className="flex flex-row items-start gap-8">
                     <div className="flex flex-col gap-6 max-w-xs w-full">
-                        <button
-                            className="mb-2 px-3 py-1 bg-gray-200 text-gray-700 rounded shadow hover:bg-gray-300 transition text-xs self-end"
-                            onClick={handleClearFilters}
-                            disabled={loading}
-                            type="button"
-                        >
-                            Clear Filters
-                        </button>
+                        <div className="flex flex-row items-center justify-between">
+                            <button
+                                className="px-2 py-1 bg-red-100 text-red-700 rounded shadow hover:bg-red-200 transition text-xs ml-auto"
+                                onClick={handleClearFilters}
+                                disabled={loading}
+                                type="button"
+                            >
+                                Clear Filters
+                            </button>
+                        </div>
                         <CollapsiblePanel title="Tag Filter" defaultOpen={false}>
                             <TagSelector
                                 selectedTags={selectedTags}
@@ -436,6 +411,7 @@ const App = () => {
                                 setSelectedYears={setSelectedYears}
                                 selectedMonths={selectedMonths}
                                 setSelectedMonths={setSelectedMonths}
+                                loadingDayRange={loadingDayRange}
                             />
                         </CollapsiblePanel>
                     </div>
