@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import TagSelector from './components/TagSelector';
 import CountrySelector from './components/CountrySelector';
-import { executeSparqlQuery, fetchAllTags, fetchAllCountries } from './utils/sparql';
+import DateSelector from './components/DateSelector.jsx';
+import { executeSparqlQuery, fetchAllTags, fetchAllCountries, fetchDayRange } from './utils/sparql';
 
 // CollapsiblePanel component for left/right columns
 const CollapsiblePanel = ({ title, children, defaultOpen = true, className = "" }) => {
@@ -53,6 +54,58 @@ const App = () => {
     const [queryTime, setQueryTime] = useState(null);
     const [forceFetchTags, setForceFetchTags] = useState(false);
 
+    // Collapsible state for SPARQL query
+    const [showSparql, setShowSparql] = useState(false);
+
+    // Day selector state
+    const [minDay, setMinDay] = useState('2019-01-01');
+    const [maxDay, setMaxDay] = useState('2019-12-31');
+    const [startDay, setStartDay] = useState('2019-01-01');
+    const [endDay, setEndDay] = useState('2019-12-31');
+
+    // Checkbox state for including day in query
+    const [includeStartDay, setIncludeStartDay] = useState(false);
+    const [includeEndDay, setIncludeEndDay] = useState(false);
+
+    // State for force-refreshing day range
+    const [forceFetchDayRange, setForceFetchDayRange] = useState(false);
+
+    // State for loading day range
+    const [loadingDayRange, setLoadingDayRange] = useState(false);
+
+    // State for day-of-week filter
+    const [selectedWeekdays, setSelectedWeekdays] = useState([]); // e.g., ['Monday', 'Tuesday']
+
+    // State for weekday range selection
+    const [weekdayRange, setWeekdayRange] = useState([null, null]);
+
+    // State for year filter (multi-select)
+    const [selectedYears, setSelectedYears] = useState([]);
+
+    // State for month filter (multi-select)
+    const [selectedMonths, setSelectedMonths] = useState([]);
+
+    // Store the latest SPARQL query for live display
+    const [liveSparqlQuery, setLiveSparqlQuery] = useState('');
+
+    // Update the live SPARQL query whenever filters change
+    useEffect(() => {
+        setLiveSparqlQuery(getSparqlQuery());
+    }, [selectedTags, selectedCountry, includeStartDay, includeEndDay, startDay, endDay, selectedWeekdays, selectedYears, queryMode, selectedMonths]);
+
+    // Fetch min/max day from SPARQL endpoint on mount or when forceFetchDayRange changes
+    useEffect(() => {
+        setLoadingDayRange(true);
+        fetchDayRange(forceFetchDayRange).then(({ min, max }) => {
+            setMinDay(min);
+            setMaxDay(max);
+            setStartDay(min);
+            setEndDay(max);
+            setLoadingDayRange(false);
+        });
+        if (forceFetchDayRange) setForceFetchDayRange(false);
+    }, [forceFetchDayRange]);
+
     // Ensure queryMode is reset to 'intersection' if only one or zero tags are selected
     useEffect(() => {
         if (selectedTags.length <= 1 && queryMode !== 'intersection') {
@@ -63,6 +116,8 @@ const App = () => {
     // Function to fetch data from the SPARQL endpoint based on the constructed query
     const fetchImageUris = async () => {
         const sparqlQuery = getSparqlQuery();
+        // Always update the query area when query changes
+        setShowSparql(true);
         if (!sparqlQuery) {
             setImageUris([]);
             setError(null);
@@ -93,32 +148,121 @@ const App = () => {
 
     // Function to construct the SPARQL query for display and execution
     const getSparqlQuery = () => {
-        if (!selectedTags.length && !selectedCountry) return '';
+        // If no filters are selected, return an empty string
+        if (
+            selectedTags.length === 0 &&
+            !selectedCountry &&
+            !includeStartDay &&
+            !includeEndDay &&
+            selectedWeekdays.length === 0 &&
+            selectedYears.length === 0 &&
+            selectedMonths.length === 0
+        ) {
+            return '';
+        }
         let whereClauses = [];
+        let prefixes = [];
+        // Tag filter block
         if (selectedTags.length) {
+            prefixes.push('PREFIX tag: <http://lsc.dcu.ie/tag#>');
+            prefixes.push('PREFIX lsc: <http://lsc.dcu.ie/schema#>');
             if (queryMode === 'intersection') {
-                whereClauses = [
-                    ...selectedTags.map(tag => `    ?s lsc:tag tag:${tag.replace(/"/g, '\"')} . `)
-                ];
+                whereClauses.push(`  {\n${selectedTags.map(tag => `    ?s lsc:tag tag:${tag.replace(/"/g, '\"')} . `).join('\n')}\n  }`);
             } else {
                 const unionFilters = selectedTags
                     .map(tag => `    { ?s lsc:tag tag:${tag.replace(/"/g, '\"')} . }`)
                     .join('\n    UNION\n');
-                whereClauses = [unionFilters];
+                whereClauses.push(`  {\n${unionFilters}\n  }`);
             }
         }
+        // Country filter block
         if (selectedCountry) {
-            whereClauses.push(`    ?s lsc:country "${selectedCountry.replace(/"/g, '\"')}" .`);
+            if (!prefixes.includes('PREFIX lsc: <http://lsc.dcu.ie/schema#>')) {
+                prefixes.push('PREFIX lsc: <http://lsc.dcu.ie/schema#>');
+            }
+            whereClauses.push(`  {\n    ?s lsc:country \"${selectedCountry.replace(/"/g, '\"')}\" .\n  }`);
         }
+        // Date, Year, Month, Weekday: group in one block
+        if (
+            includeStartDay || includeEndDay ||
+            selectedWeekdays.length > 0 ||
+            selectedYears.length > 0 ||
+            selectedMonths.length > 0
+        ) {
+            if (!prefixes.includes('PREFIX lsc: <http://lsc.dcu.ie/schema#>')) {
+                prefixes.push('PREFIX lsc: <http://lsc.dcu.ie/schema#>');
+            }
+            if (!prefixes.includes('PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>')) {
+                prefixes.push('PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>');
+            }
+            if (selectedWeekdays.length > 0 && !prefixes.includes('PREFIX megras: <http://megras.org/sparql#>')) {
+                prefixes.push('PREFIX megras: <http://megras.org/sparql#>');
+            }
+            let dateBlock = [
+                '    ?s lsc:day ?day .',
+                '    BIND(xsd:date(STRAFTER(STR(?day), "#")) AS ?dayDate)'
+            ];
+            // Date range
+            if (includeStartDay && includeEndDay) {
+                dateBlock.push(`    FILTER (?dayDate >= \"${startDay}\"^^xsd:date && ?dayDate <= \"${endDay}\"^^xsd:date)`);
+            } else if (includeStartDay) {
+                dateBlock.push(`    FILTER (?dayDate >= \"${startDay}\"^^xsd:date)`);
+            } else if (includeEndDay) {
+                dateBlock.push(`    FILTER (?dayDate <= \"${endDay}\"^^xsd:date)`);
+            }
+            // Weekday
+            if (selectedWeekdays.length > 0) {
+                const weekdayMap = {
+                    'Monday': 1,
+                    'Tuesday': 2,
+                    'Wednesday': 3,
+                    'Thursday': 4,
+                    'Friday': 5,
+                    'Saturday': 6,
+                    'Sunday': 7
+                };
+                const selectedNumbers = selectedWeekdays.map(day => weekdayMap[day]);
+                dateBlock.push(`    FILTER (megras:DAYOFWEEK(?dayDate) IN (${selectedNumbers.join(", ")}))`);
+            }
+            // Year
+            if (selectedYears.length > 0) {
+                const yearFilters = selectedYears.map(y => `YEAR(?dayDate) = ${y}`).join(' || ');
+                dateBlock.push(`    FILTER (${yearFilters})`);
+            }
+            // Month
+            if (selectedMonths.length > 0) {
+                dateBlock.push(`    FILTER (MONTH(?dayDate) IN (${selectedMonths.join(", ")}))`);
+            }
+            whereClauses.push(`  {\n${dateBlock.join('\n')}\n  }`);
+        }
+        prefixes = prefixes.sort((a, b) => a.localeCompare(b));
         return [
-            'PREFIX lsc: <http://lsc.dcu.ie/schema#>',
-            'PREFIX tag: <http://lsc.dcu.ie/tag#>',
+            ...prefixes,
+            '',
             'SELECT DISTINCT ?s',
             'WHERE {',
             whereClauses.join('\n'),
             '}'
         ].join('\n');
     };
+
+    // useEffect to clear filters on initial mount
+    useEffect(() => {
+        setSelectedTags([]);
+        setSelectedCountry('');
+        setTagSearch('');
+        setCountrySearch('');
+        setStartDay(minDay);
+        setEndDay(maxDay);
+        setIncludeStartDay(false);
+        setIncludeEndDay(false);
+        setSelectedWeekdays([]);
+        setWeekdayRange([null, null]);
+        setImageUris([]);
+        setError(null);
+        setQueryTime(null);
+        // Do not trigger fetch on mount
+    }, []);
 
     // useEffect to trigger the fetch function whenever 'triggerFetch' state changes
     useEffect(() => {
@@ -164,23 +308,56 @@ const App = () => {
 
     // Handler for search button click
     const handleSearchClick = () => {
-        // Only trigger fetch if at least one tag or a country is selected and all tags are valid
-        if ((selectedTags.length > 0 && selectedTags.every(tag =>
-            allTags.map(t => t.toLowerCase()).includes(tag.toLowerCase())
-        )) || selectedCountry) {
-            setTriggerFetch(prev => prev + 1);
-        }
+        // Always trigger fetch, regardless of filter state
+        setTriggerFetch(prev => prev + 1);
     };
+
+    // Add a handler to clear the displayed results
+    const handleClearResults = () => {
+        setImageUris([]);
+        setError(null);
+        setQueryTime(null);
+    };
+
+    // Add a handler to clear all query filters
+    const handleClearFilters = () => {
+        setSelectedTags([]);
+        setSelectedCountry('');
+        setTagSearch('');
+        setCountrySearch('');
+        setStartDay(minDay);
+        setEndDay(maxDay);
+        setIncludeStartDay(false);
+        setIncludeEndDay(false);
+        setSelectedWeekdays([]);
+        setWeekdayRange([null, null]);
+        setImageUris([]);
+        setError(null);
+        setQueryTime(null);
+        setSelectedYears([]);
+        setSelectedMonths([]);
+    };
+
 
     return (
         <div className="min-h-screen bg-gray-100 flex flex-col items-center p-4 font-inter">
-            <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-6xl">
+            <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-7xl">
                 <h1 className="text-3xl font-bold text-gray-800 mb-6 text-center">
                     LifeGraph 5
                 </h1>
-                <div className="flex flex-row items-start gap-12">
-                    <div className="flex flex-col gap-6">
-                        <CollapsiblePanel title="Tag Search">
+                <div className="flex flex-row items-start gap-8">
+                    <div className="flex flex-col gap-6 max-w-xs w-full">
+                        <div className="flex flex-row items-center justify-between">
+                            <button
+                                className="px-2 py-1 bg-red-100 text-red-700 rounded shadow hover:bg-red-200 transition text-xs ml-auto"
+                                onClick={handleClearFilters}
+                                disabled={loading}
+                                type="button"
+                            >
+                                Clear Filters
+                            </button>
+                        </div>
+                        <CollapsiblePanel title="Tag Filter" defaultOpen={false}>
                             <TagSelector
                                 selectedTags={selectedTags}
                                 setSelectedTags={setSelectedTags}
@@ -197,7 +374,7 @@ const App = () => {
                                 fetchAllTags={(force) => fetchAllTags(setAllTags, setLoadingTags, force)}
                             />
                         </CollapsiblePanel>
-                        <CollapsiblePanel title="Country Search">
+                        <CollapsiblePanel title="Country Filter" defaultOpen={false}>
                             <CountrySelector
                                 selectedCountry={selectedCountry}
                                 setSelectedCountry={setSelectedCountry}
@@ -212,72 +389,121 @@ const App = () => {
                                 fetchAllCountries={(force) => fetchAllCountries(setAllCountries, setLoadingCountries, force)}
                             />
                         </CollapsiblePanel>
+                        <CollapsiblePanel title="Date Filter" defaultOpen={false}>
+                            <DateSelector
+                                minDate={minDay}
+                                maxDate={maxDay}
+                                startDate={startDay}
+                                endDate={endDay}
+                                setStartDate={setStartDay}
+                                setEndDate={setEndDay}
+                                includeStartDay={includeStartDay}
+                                setIncludeStartDay={setIncludeStartDay}
+                                includeEndDay={includeEndDay}
+                                setIncludeEndDay={setIncludeEndDay}
+                                onRefreshDayRange={() => setForceFetchDayRange(true)}
+                                onDayChange={() => setTriggerFetch(prev => prev + 1)}
+                                selectedWeekdays={selectedWeekdays}
+                                setSelectedWeekdays={setSelectedWeekdays}
+                                weekdayRange={weekdayRange}
+                                setWeekdayRange={setWeekdayRange}
+                                selectedYears={selectedYears}
+                                setSelectedYears={setSelectedYears}
+                                selectedMonths={selectedMonths}
+                                setSelectedMonths={setSelectedMonths}
+                                loadingDayRange={loadingDayRange}
+                            />
+                        </CollapsiblePanel>
                     </div>
-                    <div className="flex-[2_2_0%] min-w-0 flex flex-col items-center justify-start p-4 bg-gray-50 rounded-lg shadow-md">
-                        {/* Query button at the top */}
-                        <button
-                            onClick={handleSearchClick}
-                            className="mb-6 px-6 py-3 bg-blue-600 text-white font-semibold rounded-md shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-150 ease-in-out w-full max-w-xs"
-                            disabled={loadingTags || loading || (selectedTags.length === 0 && !selectedCountry)}
-                        >
-                            {loadingTags ? "Loading..." : "Query"}
-                        </button>
-                        {/* Show count of results at the top */}
-                        <div className="w-full mb-4 text-lg font-semibold text-gray-700 text-center">
-                            {imageUris.length > 0 && !loading && !error && (
-                                <span>{imageUris.length} result{imageUris.length !== 1 ? 's' : ''} found</span>
-                            )}
-                        </div>
-                        {/* Show query execution time */}
-                        {queryTime !== null && !loading && !error && (
-                            <div className="w-full mb-4 text-sm text-gray-500 text-center">
-                                Query executed in {(queryTime / 1000).toFixed(1)}s
-                            </div>
-                        )}
-                        {loading && (
-                            <div className="text-center text-blue-600">
-                                <p>Loading image URIs for selected tags...</p>
-                                <div className="mt-4 animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mx-auto"></div>
-                            </div>
-                        )}
-
-                        {error && imageUris.length > 0 && (
-                            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-                                <strong className="font-bold">Error!</strong>
-                                <span className="block sm:inline"> {error}</span>
-                            </div>
-                        )}
-
-                        {!loading && !error && (
+                    <div className="flex-1 min-w-0 flex flex-col items-center justify-start p-4 bg-gray-50 rounded-lg shadow-md">
+                        {/* Query area at the top */}
+                        <div className="w-full flex flex-col items-center mb-6">
+                            <button
+                                onClick={handleSearchClick}
+                                className="mb-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-md shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-150 ease-in-out w-full max-w-xs"
+                                disabled={
+                                    loadingTags ||
+                                    loading ||
+                                    (
+                                        !getSparqlQuery()
+                                    )
+                                }
+                            >
+                                {loadingTags ? "Loading..." : "Query"}
+                            </button>
+                            {/* Collapsible SPARQL Query area */}
                             <div className="w-full">
-                                {imageUris.length > 0 ? (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                                        {imageUris.map((uri, index) => (
-                                            <div
-                                                key={index}
-                                                className="bg-gray-100 p-2 rounded-lg shadow flex justify-center items-center overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-200"
-                                                onClick={() => handleImageClick(uri)}
-                                            >
-                                                <span className="break-all text-xs text-blue-700 underline">{uri}</span>
-                                            </div>
-                                        ))}
+                                <button
+                                    className="flex items-center gap-2 text-xs text-blue-700 hover:underline focus:outline-none mb-1"
+                                    onClick={() => setShowSparql(v => !v)}
+                                    type="button"
+                                >
+                                    {showSparql ? '▼ Hide SPARQL Query' : '► Show SPARQL Query'}
+                                </button>
+                                {showSparql && (
+                                    <div className="w-full bg-white border border-gray-200 rounded p-2 mb-2 text-xs font-mono text-gray-700 whitespace-pre-wrap break-all">
+                                        {liveSparqlQuery || <span className="text-gray-400 italic">No query constructed.</span>}
                                     </div>
-                                ) : (
-                                    // Only show the "No image URIs found" message if tags are selected and a search was triggered
-                                    selectedTags.length > 0 && triggerFetch > 0
-                                        ? <p className="text-center text-gray-600 text-lg">No image URIs found for selected tags. Please check your SPARQL endpoint and query.</p>
-                                        : null
                                 )}
                             </div>
-                        )}
-                    </div>
-
-                    {/* Right: Collapsible Placeholder for future use */}
-                    <CollapsiblePanel title="SPARQL Query" defaultOpen={false}>
-                        <div className="w-full h-full flex items-start justify-center text-gray-700 font-mono text-xs whitespace-pre-wrap break-all">
-                            {getSparqlQuery() || <span className="text-gray-400 italic">No query constructed.</span>}
+                            <div className="w-full flex flex-row items-center justify-center gap-4 mb-2">
+                                {imageUris.length > 0 && !loading && !error && (
+                                    <>
+                                        <span className="text-lg font-semibold text-gray-700">{imageUris.length} result{imageUris.length !== 1 ? 's' : ''} found</span>
+                                        <button
+                                            className="px-3 py-1 bg-red-100 text-red-700 rounded shadow hover:bg-red-200 transition text-xs"
+                                            onClick={handleClearResults}
+                                            disabled={loading}
+                                            type="button"
+                                        >
+                                            Clear Results
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+                            {queryTime !== null && !loading && !error && (
+                                <div className="w-full mb-2 text-sm text-gray-500 text-center">
+                                    Query executed in {(queryTime / 1000).toFixed(1)}s
+                                </div>
+                            )}
                         </div>
-                    </CollapsiblePanel>
+                        {/* Results area below */}
+                        <div className="w-full flex-1">
+                            {loading && (
+                                <div className="text-center text-blue-600">
+                                    <p>Loading image URIs for selected tags...</p>
+                                    <div className="mt-4 animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mx-auto"></div>
+                                </div>
+                            )}
+                            {error && imageUris.length > 0 && (
+                                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+                                    <strong className="font-bold">Error!</strong>
+                                    <span className="block sm:inline"> {error}</span>
+                                </div>
+                            )}
+                            {!loading && !error && (
+                                <div className="w-full">
+                                    {imageUris.length > 0 ? (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                            {imageUris.map((uri, index) => (
+                                                <div
+                                                    key={index}
+                                                    className="bg-gray-100 p-2 rounded-lg shadow flex justify-center items-center overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-200"
+                                                    onClick={() => handleImageClick(uri)}
+                                                >
+                                                    <span className="break-all text-xs text-blue-700 underline">{uri}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        selectedTags.length > 0 && triggerFetch > 0
+                                            ? <p className="text-center text-gray-600 text-lg">No image URIs found for selected tags.</p>
+                                            : null
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </div>
             </div>
 
