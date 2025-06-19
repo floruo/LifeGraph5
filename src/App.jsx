@@ -82,13 +82,16 @@ const App = () => {
     // State for year filter (multi-select)
     const [selectedYears, setSelectedYears] = useState([]);
 
+    // State for month filter (multi-select)
+    const [selectedMonths, setSelectedMonths] = useState([]);
+
     // Store the latest SPARQL query for live display
     const [liveSparqlQuery, setLiveSparqlQuery] = useState('');
 
     // Update the live SPARQL query whenever filters change
     useEffect(() => {
         setLiveSparqlQuery(getSparqlQuery());
-    }, [selectedTags, selectedCountry, includeStartDay, includeEndDay, startDay, endDay, selectedWeekdays, selectedYears, queryMode]);
+    }, [selectedTags, selectedCountry, includeStartDay, includeEndDay, startDay, endDay, selectedWeekdays, selectedYears, queryMode, selectedMonths]);
 
     // Fetch min/max day from SPARQL endpoint on mount or when forceFetchDayRange changes
     useEffect(() => {
@@ -152,7 +155,8 @@ const App = () => {
             !includeStartDay &&
             !includeEndDay &&
             selectedWeekdays.length === 0 &&
-            selectedYears.length === 0
+            selectedYears.length === 0 &&
+            selectedMonths.length === 0
         ) {
             return '';
         }
@@ -240,6 +244,23 @@ const App = () => {
             }
             const yearFilters = selectedYears.map(y => `YEAR(?dayDate) = ${y}`).join(' || ');
             whereClauses.push(`    FILTER (${yearFilters})`);
+        }
+        // Month filter (independent)
+        if (selectedMonths.length > 0) {
+            if (!prefixes.includes('PREFIX lsc: <http://lsc.dcu.ie/schema#>')) {
+                prefixes.push('PREFIX lsc: <http://lsc.dcu.ie/schema#>');
+            }
+            if (!prefixes.includes('PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>')) {
+                prefixes.push('PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>');
+            }
+            if (!whereClauses.includes('    ?s lsc:day ?day .')) {
+                whereClauses.push('    ?s lsc:day ?day .');
+            }
+            if (!whereClauses.includes('    BIND(xsd:date(STRAFTER(STR(?day), "#")) AS ?dayDate)')) {
+                whereClauses.push('    BIND(xsd:date(STRAFTER(STR(?day), "#")) AS ?dayDate)');
+            }
+            // Use IN list expression for months
+            whereClauses.push(`    FILTER (MONTH(?dayDate) IN (${selectedMonths.join(", ")}))`);
         }
         prefixes = prefixes.sort((a, b) => a.localeCompare(b));
         return [
@@ -340,6 +361,8 @@ const App = () => {
         setImageUris([]);
         setError(null);
         setQueryTime(null);
+        setSelectedYears([]);
+        setSelectedMonths([]);
     };
 
 
@@ -411,6 +434,8 @@ const App = () => {
                                 setWeekdayRange={setWeekdayRange}
                                 selectedYears={selectedYears}
                                 setSelectedYears={setSelectedYears}
+                                selectedMonths={selectedMonths}
+                                setSelectedMonths={setSelectedMonths}
                             />
                         </CollapsiblePanel>
                     </div>
