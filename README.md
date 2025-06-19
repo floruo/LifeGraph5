@@ -11,6 +11,11 @@ A React-based frontend for exploring and querying lifelog image data using tags 
 - **Caching:** Tags and countries are cached in localStorage for faster access.
 - **Tailwind CSS:** Modern, responsive UI with Inter font.
 
+## IMPORTANT: Changes Made to the LSC23 Data
+
+- Replaced whitespace in tag URIs with underscore
+- Removed leading whitespace for categories
+
 ## Getting Started
 
 ### Prerequisites

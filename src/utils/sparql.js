@@ -113,6 +113,50 @@ export const fetchAllCountries = async (setAllCountries, setLoadingCountries, fo
     }
 };
 
+export const fetchAllCategories = async (setAllCategories, setLoadingCategories, force = false) => {
+    const cacheKey = 'allLscCategories';
+    setLoadingCategories(true);
+    try {
+        if (force) {
+            try {
+                localStorage.removeItem(cacheKey);
+            } catch (e) {
+                console.error('Could not remove categories from localStorage:', e);
+            }
+        } else {
+            const cached = localStorage.getItem(cacheKey);
+            if (cached) {
+                const categories = JSON.parse(cached).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+                setAllCategories(categories);
+                setLoadingCategories(false);
+                return;
+            }
+        }
+        const query = `
+            SELECT DISTINCT ?category
+            WHERE {
+                ?s <http://lsc.dcu.ie/schema#category> ?category .
+            }
+        `;
+        const bindings = await executeSparqlQuery(query);
+        const categories = bindings
+            .map(binding => binding.category?.value)
+            .filter(Boolean)
+            .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+        setAllCategories(categories);
+        try {
+            localStorage.setItem(cacheKey, JSON.stringify(categories));
+        } catch (e) {
+            console.error('Could not save categories to localStorage:', e);
+        }
+    } catch (e) {
+        setAllCategories([]);
+        console.error('Error fetching categories:', e);
+    } finally {
+        setLoadingCategories(false);
+    }
+};
+
 // Fetch and cache the day range, ensuring only one API call is made at a time
 let dayRangePromise = null;
 export const fetchDayRange = async (force = false) => {

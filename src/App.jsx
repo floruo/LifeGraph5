@@ -3,7 +3,8 @@ import React, { useState, useEffect } from 'react';
 import TagSelector from './components/TagSelector';
 import CountrySelector from './components/CountrySelector';
 import DateSelector from './components/DateSelector.jsx';
-import { executeSparqlQuery, fetchAllTags, fetchAllCountries, fetchDayRange } from './utils/sparql';
+import CategorySelector from './components/CategorySelector';
+import { executeSparqlQuery, fetchAllTags, fetchAllCountries, fetchDayRange, fetchAllCategories } from './utils/sparql';
 
 // CollapsiblePanel component for left/right columns
 const CollapsiblePanel = ({ title, children, defaultOpen = true, className = "" }) => {
@@ -37,6 +38,11 @@ const App = () => {
     const [selectedCountry, setSelectedCountry] = useState('');
     const [countrySearch, setCountrySearch] = useState('');
     const [forceFetchCountries, setForceFetchCountries] = useState(false);
+
+    // Category selector state
+    const [allCategories, setAllCategories] = useState([]);
+    const [loadingCategories, setLoadingCategories] = useState(true);
+    const [selectedCategories, setSelectedCategories] = useState([]);
 
     // State for URI overlay
     const [overlayImageUrl, setOverlayImageUrl] = useState(null);
@@ -91,7 +97,7 @@ const App = () => {
     // Update the live SPARQL query whenever filters change
     useEffect(() => {
         setLiveSparqlQuery(getSparqlQuery());
-    }, [selectedTags, selectedCountry, includeStartDay, includeEndDay, startDay, endDay, selectedWeekdays, selectedYears, queryMode, selectedMonths]);
+    }, [selectedTags, selectedCountry, includeStartDay, includeEndDay, startDay, endDay, selectedWeekdays, selectedYears, queryMode, selectedMonths, selectedCategories]);
 
     // Fetch min/max day from SPARQL endpoint on mount or when forceFetchDayRange changes
     useEffect(() => {
@@ -156,7 +162,8 @@ const App = () => {
             !includeEndDay &&
             selectedWeekdays.length === 0 &&
             selectedYears.length === 0 &&
-            selectedMonths.length === 0
+            selectedMonths.length === 0 &&
+            selectedCategories.length === 0
         ) {
             return '';
         }
@@ -235,6 +242,15 @@ const App = () => {
             }
             whereClauses.push(`  {\n${dateBlock.join('\n')}\n  }`);
         }
+        // Category filter block
+        if (selectedCategories.length) {
+            prefixes.push('PREFIX lsc: <http://lsc.dcu.ie/schema#>');
+            // Always use union logic for categories (OR)
+            const unionFilters = selectedCategories
+                .map(cat => `    { ?s lsc:category "${cat.replace(/"/g, '\"')}" . }`)
+                .join('\n    UNION\n');
+            whereClauses.push(`  {\n${unionFilters}\n  }`);
+        }
         prefixes = prefixes.sort((a, b) => a.localeCompare(b));
         return [
             ...prefixes,
@@ -296,6 +312,11 @@ const App = () => {
         // eslint-disable-next-line
     }, [forceFetchCountries]);
 
+    // useEffect to fetch all categories once on component mount
+    useEffect(() => {
+        fetchAllCategories(setAllCategories, setLoadingCategories);
+    }, []);
+
     // Handler for URI overlay
     const handleImageClick = (originalUri) => {
         setOverlayImageUrl(originalUri);
@@ -336,6 +357,7 @@ const App = () => {
         setQueryTime(null);
         setSelectedYears([]);
         setSelectedMonths([]);
+        setSelectedCategories([]); // Clear categories as well
     };
 
 
@@ -414,6 +436,15 @@ const App = () => {
                                 loadingDayRange={loadingDayRange}
                             />
                         </CollapsiblePanel>
+                        <CollapsiblePanel title="Category Filter" defaultOpen={false}>
+                            <CategorySelector
+                                selectedCategories={selectedCategories}
+                                setSelectedCategories={setSelectedCategories}
+                                loading={loadingCategories}
+                                categories={allCategories}
+                                fetchAllCategories={(force) => fetchAllCategories(setAllCategories, setLoadingCategories, force)}
+                            />
+                        </CollapsiblePanel>
                     </div>
                     <div className="flex-1 min-w-0 flex flex-col items-center justify-start p-4 bg-gray-50 rounded-lg shadow-md">
                         {/* Query area at the top */}
@@ -429,7 +460,7 @@ const App = () => {
                                     )
                                 }
                             >
-                                {loadingTags ? "Loading..." : "Query"}
+                                {loadingTags ? "Loading ..." : "Query"}
                             </button>
                             {/* Collapsible SPARQL Query area */}
                             <div className="w-full">
