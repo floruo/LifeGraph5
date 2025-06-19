@@ -152,58 +152,57 @@ const App = () => {
         }
     };
 
-    // Function to construct the SPARQL query for display and execution
-    const getSparqlQuery = () => {
-        // If no filters are selected, return an empty string
-        if (
-            selectedTags.length === 0 &&
-            !selectedCountry &&
-            !includeStartDay &&
-            !includeEndDay &&
-            selectedWeekdays.length === 0 &&
-            selectedYears.length === 0 &&
-            selectedMonths.length === 0 &&
-            selectedCategories.length === 0
-        ) {
-            return '';
+    // Helper function to push unique lines to an array
+    const pushUnique = (arr, line) => {
+        if (!arr.includes(line)) {
+            arr.push(line);
         }
-        let whereClauses = [];
-        let prefixes = [];
-        // Tag filter block
+    };
+
+    // Tag filter block
+    const getTagBlock = () => {
+        let tagClauses = [];
+        let tagPrefixes = [];
         if (selectedTags.length) {
-            prefixes.push('PREFIX tag: <http://lsc.dcu.ie/tag#>');
-            prefixes.push('PREFIX lsc: <http://lsc.dcu.ie/schema#>');
+            pushUnique(tagPrefixes, 'PREFIX tag: <http://lsc.dcu.ie/tag#>');
+            pushUnique(tagPrefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
             if (queryMode === 'intersection') {
-                whereClauses.push(`  {\n${selectedTags.map(tag => `    ?s lsc:tag tag:${tag.replace(/"/g, '\"')} . `).join('\n')}\n  }`);
+                tagClauses.push(`  {\n${selectedTags.map(tag => `    ?s lsc:tag tag:${tag.replace(/\"/g, '\\"')} . `).join('\n')}\n  }`);
             } else {
                 const unionFilters = selectedTags
-                    .map(tag => `    { ?s lsc:tag tag:${tag.replace(/"/g, '\"')} . }`)
+                    .map(tag => `    { ?s lsc:tag tag:${tag.replace(/\"/g, '\\"')} . }`)
                     .join('\n    UNION\n');
-                whereClauses.push(`  {\n${unionFilters}\n  }`);
+                tagClauses.push(`  {\n${unionFilters}\n  }`);
             }
         }
-        // Country filter block
+        return { tagClauses, tagPrefixes };
+    };
+
+    // Country filter block
+    const getCountryBlock = () => {
+        let countryClauses = [];
+        let countryPrefixes = [];
         if (selectedCountry) {
-            if (!prefixes.includes('PREFIX lsc: <http://lsc.dcu.ie/schema#>')) {
-                prefixes.push('PREFIX lsc: <http://lsc.dcu.ie/schema#>');
-            }
-            whereClauses.push(`  {\n    ?s lsc:country \"${selectedCountry.replace(/"/g, '\"')}\" .\n  }`);
+            pushUnique(countryPrefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
+            countryClauses.push(`  {\n    ?s lsc:country \"${selectedCountry.replace(/\"/g, '\\"')}\" .\n  }`);
         }
-        // Date, Year, Month, Weekday: group in one block
+        return { countryClauses, countryPrefixes };
+    };
+
+    // Date, Year, Month, Weekday block
+    const getDateBlock = () => {
+        let dateClauses = [];
+        let datePrefixes = [];
         if (
             includeStartDay || includeEndDay ||
             selectedWeekdays.length > 0 ||
             selectedYears.length > 0 ||
             selectedMonths.length > 0
         ) {
-            if (!prefixes.includes('PREFIX lsc: <http://lsc.dcu.ie/schema#>')) {
-                prefixes.push('PREFIX lsc: <http://lsc.dcu.ie/schema#>');
-            }
-            if (!prefixes.includes('PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>')) {
-                prefixes.push('PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>');
-            }
-            if (selectedWeekdays.length > 0 && !prefixes.includes('PREFIX megras: <http://megras.org/sparql#>')) {
-                prefixes.push('PREFIX megras: <http://megras.org/sparql#>');
+            pushUnique(datePrefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
+            pushUnique(datePrefixes, 'PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>');
+            if (selectedWeekdays.length > 0) {
+                pushUnique(datePrefixes, 'PREFIX megras: <http://megras.org/sparql#>');
             }
             let dateBlock = [
                 '    ?s lsc:day ?day .',
@@ -240,17 +239,58 @@ const App = () => {
             if (selectedMonths.length > 0) {
                 dateBlock.push(`    FILTER (MONTH(?dayDate) IN (${selectedMonths.join(", ")}))`);
             }
-            whereClauses.push(`  {\n${dateBlock.join('\n')}\n  }`);
+            dateClauses.push(`  {\n${dateBlock.join('\n')}\n  }`);
         }
-        // Category filter block
+        return { dateClauses, datePrefixes };
+    };
+
+    // Category filter block
+    const getCategoryBlock = () => {
+        let categoryClauses = [];
+        let categoryPrefixes = [];
         if (selectedCategories.length) {
-            prefixes.push('PREFIX lsc: <http://lsc.dcu.ie/schema#>');
+            pushUnique(categoryPrefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
             // Always use union logic for categories (OR)
             const unionFilters = selectedCategories
-                .map(cat => `    { ?s lsc:category "${cat.replace(/"/g, '\"')}" . }`)
+                .map(cat => `    { ?s lsc:category \"${cat.replace(/\"/g, '\\"')}\" . }`)
                 .join('\n    UNION\n');
-            whereClauses.push(`  {\n${unionFilters}\n  }`);
+            categoryClauses.push(`  {\n${unionFilters}\n  }`);
         }
+        return { categoryClauses, categoryPrefixes };
+    };
+
+    // Main SPARQL query builder
+    const getSparqlQuery = () => {
+        if (
+            selectedTags.length === 0 &&
+            !selectedCountry &&
+            !includeStartDay &&
+            !includeEndDay &&
+            selectedWeekdays.length === 0 &&
+            selectedYears.length === 0 &&
+            selectedMonths.length === 0 &&
+            selectedCategories.length === 0
+        ) {
+            return '';
+        }
+        let whereClauses = [];
+        let prefixes = [];
+        // Tag block
+        const { tagClauses, tagPrefixes } = getTagBlock();
+        whereClauses.push(...tagClauses);
+        tagPrefixes.forEach(p => pushUnique(prefixes, p));
+        // Country block
+        const { countryClauses, countryPrefixes } = getCountryBlock();
+        whereClauses.push(...countryClauses);
+        countryPrefixes.forEach(p => pushUnique(prefixes, p));
+        // Date block
+        const { dateClauses, datePrefixes } = getDateBlock();
+        whereClauses.push(...dateClauses);
+        datePrefixes.forEach(p => pushUnique(prefixes, p));
+        // Category block
+        const { categoryClauses, categoryPrefixes } = getCategoryBlock();
+        whereClauses.push(...categoryClauses);
+        categoryPrefixes.forEach(p => pushUnique(prefixes, p));
         prefixes = prefixes.sort((a, b) => a.localeCompare(b));
         return [
             ...prefixes,
