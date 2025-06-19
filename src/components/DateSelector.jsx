@@ -10,7 +10,7 @@ const weekdays = [
     "Sunday",
 ];
 
-const DateSelector = ({ minDate, maxDate, startDate, endDate, setStartDate, setEndDate, includeStartDay, setIncludeStartDay, includeEndDay, setIncludeEndDay, onRefreshDayRange, onDayChange, selectedWeekdays, setSelectedWeekdays, weekdayRange, setWeekdayRange }) => {
+const DateSelector = ({ minDate, maxDate, startDate, endDate, setStartDate, setEndDate, includeStartDay, setIncludeStartDay, includeEndDay, setIncludeEndDay, onRefreshDayRange, onDayChange, selectedWeekdays, setSelectedWeekdays, weekdayRange, setWeekdayRange, selectedYears, setSelectedYears }) => {
     // Helper to format date for input[type="range"]
     const toInputValue = (date) => date.split('-').join('');
     const fromInputValue = (val) => {
@@ -69,6 +69,21 @@ const DateSelector = ({ minDate, maxDate, startDate, endDate, setStartDate, setE
         setSelectedWeekdays(range);
     };
 
+    // Extract years from minDate and maxDate
+    const minYear = parseInt(minDate.slice(0, 4), 10);
+    const maxYear = parseInt(maxDate.slice(0, 4), 10);
+    const years = [];
+    for (let y = minYear; y <= maxYear; y++) years.push(y);
+
+    // Helper to update selected years (multi-select/deselect)
+    const handleYearToggle = (year) => {
+        setSelectedYears(prev =>
+            prev.includes(year)
+                ? prev.filter(y => y !== year)
+                : [...prev, year]
+        );
+    };
+
     return (
         <div className="flex flex-col gap-2 w-full">
             <div className="flex flex-row items-center gap-2 mb-2">
@@ -117,6 +132,19 @@ const DateSelector = ({ minDate, maxDate, startDate, endDate, setStartDate, setE
                     onChange={handleEndChange}
                     className="w-full px-2 py-1 border rounded"
                 />
+            </div>
+            {/* Year selector UI below date fields but above weekdays */}
+            <div className="flex flex-wrap gap-2 mt-2 mb-2 w-full">
+                {years.map(year => (
+                    <button
+                        key={year}
+                        type="button"
+                        className={`px-2 py-1 rounded border text-xs flex-1 text-center ${selectedYears.includes(year) ? 'bg-blue-600 text-white border-blue-700' : 'bg-white text-gray-700 border-gray-300'}`}
+                        onClick={() => handleYearToggle(year)}
+                    >
+                        {year}
+                    </button>
+                ))}
             </div>
             {/* Weekday selector UI below date fields */}
             <div className="flex flex-wrap gap-2 mt-2">

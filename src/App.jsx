@@ -79,6 +79,17 @@ const App = () => {
     // State for weekday range selection
     const [weekdayRange, setWeekdayRange] = useState([null, null]);
 
+    // State for year filter (multi-select)
+    const [selectedYears, setSelectedYears] = useState([]);
+
+    // Store the latest SPARQL query for live display
+    const [liveSparqlQuery, setLiveSparqlQuery] = useState('');
+
+    // Update the live SPARQL query whenever filters change
+    useEffect(() => {
+        setLiveSparqlQuery(getSparqlQuery());
+    }, [selectedTags, selectedCountry, includeStartDay, includeEndDay, startDay, endDay, selectedWeekdays, selectedYears, queryMode]);
+
     // Fetch min/max day from SPARQL endpoint on mount or when forceFetchDayRange changes
     useEffect(() => {
         setLoadingDayRange(true);
@@ -102,6 +113,8 @@ const App = () => {
     // Function to fetch data from the SPARQL endpoint based on the constructed query
     const fetchImageUris = async () => {
         const sparqlQuery = getSparqlQuery();
+        // Always update the query area when query changes
+        setShowSparql(true);
         if (!sparqlQuery) {
             setImageUris([]);
             setError(null);
@@ -138,7 +151,8 @@ const App = () => {
             !selectedCountry &&
             !includeStartDay &&
             !includeEndDay &&
-            selectedWeekdays.length === 0
+            selectedWeekdays.length === 0 &&
+            selectedYears.length === 0
         ) {
             return '';
         }
@@ -171,7 +185,7 @@ const App = () => {
             }
             prefixes.push('PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>');
             whereClauses.push('    ?s lsc:day ?day .');
-            whereClauses.push('    BIND(xsd:date(STRAFTER(STR(?day), "#")) AS ?dayDate )');
+            whereClauses.push('    BIND(xsd:date(STRAFTER(STR(?day), "#")) AS ?dayDate)');
             if (includeStartDay && includeEndDay) {
                 whereClauses.push(`    FILTER (?dayDate >= "${startDay}"^^xsd:date && ?dayDate <= "${endDay}"^^xsd:date)`);
             } else if (includeStartDay) {
@@ -194,8 +208,8 @@ const App = () => {
             if (!whereClauses.includes('    ?s lsc:day ?day .')) {
                 whereClauses.push('    ?s lsc:day ?day .');
             }
-            if (!whereClauses.includes('    BIND(xsd:date(STRAFTER(STR(?day), "#")) AS ?dayDate )')) {
-                whereClauses.push('    BIND(xsd:date(STRAFTER(STR(?day), "#")) AS ?dayDate )');
+            if (!whereClauses.includes('    BIND(xsd:date(STRAFTER(STR(?day), "#")) AS ?dayDate)')) {
+                whereClauses.push('    BIND(xsd:date(STRAFTER(STR(?day), "#")) AS ?dayDate)');
             }
             // Map weekdays to numbers (1-7) for DAYOFWEEK function according to ISO
             const weekdayMap = {
@@ -209,6 +223,23 @@ const App = () => {
             };
             const selectedNumbers = selectedWeekdays.map(day => weekdayMap[day]);
             whereClauses.push(`    FILTER (megras:DAYOFWEEK(?dayDate) IN (${selectedNumbers.join(", ")}))`);
+        }
+        // Year filter (independent)
+        if (selectedYears.length > 0) {
+            if (!prefixes.includes('PREFIX lsc: <http://lsc.dcu.ie/schema#>')) {
+                prefixes.push('PREFIX lsc: <http://lsc.dcu.ie/schema#>');
+            }
+            if (!prefixes.includes('PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>')) {
+                prefixes.push('PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>');
+            }
+            if (!whereClauses.includes('    ?s lsc:day ?day .')) {
+                whereClauses.push('    ?s lsc:day ?day .');
+            }
+            if (!whereClauses.includes('    BIND(xsd:date(STRAFTER(STR(?day), "#")) AS ?dayDate)')) {
+                whereClauses.push('    BIND(xsd:date(STRAFTER(STR(?day), "#")) AS ?dayDate)');
+            }
+            const yearFilters = selectedYears.map(y => `YEAR(?dayDate) = ${y}`).join(' || ');
+            whereClauses.push(`    FILTER (${yearFilters})`);
         }
         prefixes = prefixes.sort((a, b) => a.localeCompare(b));
         return [
@@ -378,6 +409,8 @@ const App = () => {
                                 setSelectedWeekdays={setSelectedWeekdays}
                                 weekdayRange={weekdayRange}
                                 setWeekdayRange={setWeekdayRange}
+                                selectedYears={selectedYears}
+                                setSelectedYears={setSelectedYears}
                             />
                         </CollapsiblePanel>
                     </div>
@@ -408,7 +441,7 @@ const App = () => {
                                 </button>
                                 {showSparql && (
                                     <div className="w-full bg-white border border-gray-200 rounded p-2 mb-2 text-xs font-mono text-gray-700 whitespace-pre-wrap break-all">
-                                        {getSparqlQuery() || <span className="text-gray-400 italic">No query constructed.</span>}
+                                        {liveSparqlQuery || <span className="text-gray-400 italic">No query constructed.</span>}
                                     </div>
                                 )}
                             </div>
