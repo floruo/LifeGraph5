@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import TagSelector from './components/TagSelector';
 import CountrySelector from './components/CountrySelector';
 import DateSelector from './components/DateSelector.jsx';
-import WeekdaySelector from './components/WeekdaySelector';
 import { executeSparqlQuery, fetchAllTags, fetchAllCountries, fetchDayRange } from './utils/sparql';
 
 // CollapsiblePanel component for left/right columns
@@ -375,10 +374,6 @@ const App = () => {
                                 setIncludeEndDay={setIncludeEndDay}
                                 onRefreshDayRange={() => setForceFetchDayRange(true)}
                                 onDayChange={() => setTriggerFetch(prev => prev + 1)}
-                            />
-                        </CollapsiblePanel>
-                        <CollapsiblePanel title="Weekday Filter" defaultOpen={false}>
-                            <WeekdaySelector
                                 selectedWeekdays={selectedWeekdays}
                                 setSelectedWeekdays={setSelectedWeekdays}
                                 weekdayRange={weekdayRange}
