@@ -6,6 +6,14 @@ import DateSelector from './components/DateSelector.jsx';
 import CategorySelector from './components/CategorySelector';
 import { executeSparqlQuery, fetchAllTags, fetchAllCountries, fetchDayRange, fetchAllCategories } from './utils/sparql';
 
+// Configurable filter order
+const filterOrder = [
+    'tags',
+    'category',
+    'country',
+    'date',
+];
+
 // CollapsiblePanel component for left/right columns
 const CollapsiblePanel = ({ title, children, defaultOpen = true, className = "" }) => {
     const [open, setOpen] = useState(defaultOpen);
@@ -259,6 +267,82 @@ const App = () => {
         return { categoryClauses, categoryPrefixes };
     };
 
+    // Helper to render filter panels by type
+    const renderFilterPanel = (type) => {
+        switch (type) {
+            case 'tags':
+                return (
+                    <CollapsiblePanel title="Tags">
+                        <TagSelector
+                            allTags={allTags}
+                            loading={loadingTags}
+                            selectedTags={selectedTags}
+                            setSelectedTags={setSelectedTags}
+                            tagSearch={tagSearch}
+                            setTagSearch={setTagSearch}
+                            forceFetchTags={forceFetchTags}
+                            setForceFetchTags={setForceFetchTags}
+                            fetchAllTags={fetchAllTags}
+                        />
+                    </CollapsiblePanel>
+                );
+            case 'country':
+                return (
+                    <CollapsiblePanel title="Country">
+                        <CountrySelector
+                            allCountries={allCountries}
+                            loading={loadingCountries}
+                            selectedCountry={selectedCountry}
+                            setSelectedCountry={setSelectedCountry}
+                            countrySearch={countrySearch}
+                            setCountrySearch={setCountrySearch}
+                            forceFetchCountries={forceFetchCountries}
+                            setForceFetchCountries={setForceFetchCountries}
+                            fetchAllCountries={fetchAllCountries}
+                        />
+                    </CollapsiblePanel>
+                );
+            case 'date':
+                return (
+                    <CollapsiblePanel title="Date/Time">
+                        <DateSelector
+                            minDate={minDay}
+                            maxDate={maxDay}
+                            startDate={startDay}
+                            endDate={endDay}
+                            setStartDate={setStartDay}
+                            setEndDate={setEndDay}
+                            includeStartDay={includeStartDay}
+                            setIncludeStartDay={setIncludeStartDay}
+                            includeEndDay={includeEndDay}
+                            setIncludeEndDay={setIncludeEndDay}
+                            selectedWeekdays={selectedWeekdays}
+                            setSelectedWeekdays={setSelectedWeekdays}
+                            selectedYears={selectedYears}
+                            setSelectedYears={setSelectedYears}
+                            selectedMonths={selectedMonths}
+                            setSelectedMonths={setSelectedMonths}
+                            loadingDayRange={loadingDayRange}
+                        />
+                    </CollapsiblePanel>
+                );
+            case 'category':
+                return (
+                    <CollapsiblePanel title="Category">
+                        <CategorySelector
+                            categories={allCategories}
+                            loading={loadingCategories}
+                            selectedCategories={selectedCategories}
+                            setSelectedCategories={setSelectedCategories}
+                            fetchAllCategories={fetchAllCategories}
+                        />
+                    </CollapsiblePanel>
+                );
+            default:
+                return null;
+        }
+    };
+
     // Main SPARQL query builder
     const getSparqlQuery = () => {
         if (
@@ -275,22 +359,25 @@ const App = () => {
         }
         let whereClauses = [];
         let prefixes = [];
-        // Tag block
-        const { tagClauses, tagPrefixes } = getTagBlock();
-        whereClauses.push(...tagClauses);
-        tagPrefixes.forEach(p => pushUnique(prefixes, p));
-        // Country block
-        const { countryClauses, countryPrefixes } = getCountryBlock();
-        whereClauses.push(...countryClauses);
-        countryPrefixes.forEach(p => pushUnique(prefixes, p));
-        // Date block
-        const { dateClauses, datePrefixes } = getDateBlock();
-        whereClauses.push(...dateClauses);
-        datePrefixes.forEach(p => pushUnique(prefixes, p));
-        // Category block
-        const { categoryClauses, categoryPrefixes } = getCategoryBlock();
-        whereClauses.push(...categoryClauses);
-        categoryPrefixes.forEach(p => pushUnique(prefixes, p));
+        filterOrder.forEach(type => {
+            if (type === 'tags') {
+                const { tagClauses, tagPrefixes } = getTagBlock();
+                whereClauses.push(...tagClauses);
+                tagPrefixes.forEach(p => pushUnique(prefixes, p));
+            } else if (type === 'country') {
+                const { countryClauses, countryPrefixes } = getCountryBlock();
+                whereClauses.push(...countryClauses);
+                countryPrefixes.forEach(p => pushUnique(prefixes, p));
+            } else if (type === 'date') {
+                const { dateClauses, datePrefixes } = getDateBlock();
+                whereClauses.push(...dateClauses);
+                datePrefixes.forEach(p => pushUnique(prefixes, p));
+            } else if (type === 'category') {
+                const { categoryClauses, categoryPrefixes } = getCategoryBlock();
+                whereClauses.push(...categoryClauses);
+                categoryPrefixes.forEach(p => pushUnique(prefixes, p));
+            }
+        });
         prefixes = prefixes.sort((a, b) => a.localeCompare(b));
         return [
             ...prefixes,
@@ -419,72 +506,12 @@ const App = () => {
                                 Clear Filters
                             </button>
                         </div>
-                        <CollapsiblePanel title="Tag Filter" defaultOpen={false}>
-                            <TagSelector
-                                selectedTags={selectedTags}
-                                setSelectedTags={setSelectedTags}
-                                queryMode={queryMode}
-                                setQueryMode={setQueryMode}
-                                loadingTags={loadingTags}
-                                setLoadingTags={setLoadingTags}
-                                allTags={allTags}
-                                setAllTags={setAllTags}
-                                forceFetchTags={forceFetchTags}
-                                setForceFetchTags={setForceFetchTags}
-                                tagSearch={tagSearch}
-                                setTagSearch={setTagSearch}
-                                fetchAllTags={(force) => fetchAllTags(setAllTags, setLoadingTags, force)}
-                            />
-                        </CollapsiblePanel>
-                        <CollapsiblePanel title="Country Filter" defaultOpen={false}>
-                            <CountrySelector
-                                selectedCountry={selectedCountry}
-                                setSelectedCountry={setSelectedCountry}
-                                loadingCountries={loadingCountries}
-                                setLoadingCountries={setLoadingCountries}
-                                allCountries={allCountries}
-                                setAllCountries={setAllCountries}
-                                forceFetchCountries={forceFetchCountries}
-                                setForceFetchCountries={setForceFetchCountries}
-                                countrySearch={countrySearch}
-                                setCountrySearch={setCountrySearch}
-                                fetchAllCountries={(force) => fetchAllCountries(setAllCountries, setLoadingCountries, force)}
-                            />
-                        </CollapsiblePanel>
-                        <CollapsiblePanel title="Date Filter" defaultOpen={false}>
-                            <DateSelector
-                                minDate={minDay}
-                                maxDate={maxDay}
-                                startDate={startDay}
-                                endDate={endDay}
-                                setStartDate={setStartDay}
-                                setEndDate={setEndDay}
-                                includeStartDay={includeStartDay}
-                                setIncludeStartDay={setIncludeStartDay}
-                                includeEndDay={includeEndDay}
-                                setIncludeEndDay={setIncludeEndDay}
-                                onRefreshDayRange={() => setForceFetchDayRange(true)}
-                                onDayChange={() => setTriggerFetch(prev => prev + 1)}
-                                selectedWeekdays={selectedWeekdays}
-                                setSelectedWeekdays={setSelectedWeekdays}
-                                weekdayRange={weekdayRange}
-                                setWeekdayRange={setWeekdayRange}
-                                selectedYears={selectedYears}
-                                setSelectedYears={setSelectedYears}
-                                selectedMonths={selectedMonths}
-                                setSelectedMonths={setSelectedMonths}
-                                loadingDayRange={loadingDayRange}
-                            />
-                        </CollapsiblePanel>
-                        <CollapsiblePanel title="Category Filter" defaultOpen={false}>
-                            <CategorySelector
-                                selectedCategories={selectedCategories}
-                                setSelectedCategories={setSelectedCategories}
-                                loading={loadingCategories}
-                                categories={allCategories}
-                                fetchAllCategories={(force) => fetchAllCategories(setAllCategories, setLoadingCategories, force)}
-                            />
-                        </CollapsiblePanel>
+                        {/* Left column: Filters (configurable order) */}
+                        <div className="flex flex-col gap-4">
+                            {filterOrder.map(type => (
+                                <React.Fragment key={type}>{renderFilterPanel(type)}</React.Fragment>
+                            ))}
+                        </div>
                     </div>
                     <div className="flex-1 min-w-0 flex flex-col items-center justify-start p-4 bg-gray-50 rounded-lg shadow-md">
                         {/* Query area at the top */}
