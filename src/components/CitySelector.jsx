@@ -56,50 +56,51 @@ const CitySelector = ({
                     Clear City
                 </button>
             </div>
-            {loadingCities && (
+            {loadingCities ? (
                 <div className="mb-4 w-full text-xs text-gray-400 text-left">Loading ...</div>
-            )}
-            {/* Combined city search and selection dropdown */}
-            {!loadingCities && (
-                <div className="mb-6 w-full relative">
-                    <input
-                        type="text"
-                        className="p-3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-gray-900 w-full"
-                        placeholder="Type to search or select city"
-                        value={citySearch}
-                        onChange={handleCitySearchChange}
-                        autoComplete="off"
-                    />
-                    <div
-                        className="max-h-48 overflow-y-auto border border-t-0 border-gray-300 rounded-b-md bg-white w-full"
-                        style={{ marginTop: '-2px' }}
-                    >
-                        {filteredCities.length === 0 ? (
-                            <div className="p-3 text-gray-400">No cities found</div>
-                        ) : (
-                            filteredCities.map((c, index) => (
-                                <div
-                                    key={index}
-                                    className="p-3 cursor-pointer hover:bg-blue-100 flex items-center"
-                                    onClick={() => handleCitySelect(c)}
-                                >
-                                    {selectedCity === c ? (
-                                        <span className="mr-2 text-green-600">✔</span>
-                                    ) : null}
-                                    {c}
-                                </div>
-                            ))
-                        )}
+            ) : (
+                <>
+                    {/* Combined city search and selection dropdown */}
+                    <div className="mb-6 w-full relative">
+                        <input
+                            type="text"
+                            className="p-3 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-gray-900 w-full"
+                            placeholder="Type to search or select city"
+                            value={citySearch}
+                            onChange={handleCitySearchChange}
+                            autoComplete="off"
+                        />
+                        <div
+                            className="max-h-48 overflow-y-auto border border-t-0 border-gray-300 rounded-b-md bg-white w-full"
+                            style={{ marginTop: '-2px' }}
+                        >
+                            {filteredCities.length === 0 ? (
+                                <div className="p-3 text-gray-400">No cities found</div>
+                            ) : (
+                                filteredCities.map((c, index) => (
+                                    <div
+                                        key={index}
+                                        className="p-3 cursor-pointer hover:bg-blue-100 flex items-center"
+                                        onClick={() => handleCitySelect(c)}
+                                    >
+                                        {selectedCity === c ? (
+                                            <span className="mr-2 text-green-600">✔</span>
+                                        ) : null}
+                                        {c}
+                                    </div>
+                                ))
+                            )}
+                        </div>
                     </div>
-                </div>
-            )}
-            {/* Display selected city */}
-            {selectedCity && (
-                <div className="mb-4 flex flex-wrap gap-2 items-center">
-                    <div className="flex flex-wrap gap-2 flex-1">
-                        <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded shadow text-xs">{selectedCity}</span>
-                    </div>
-                </div>
+                    {/* Display selected city */}
+                    {selectedCity && (
+                        <div className="mb-4 flex flex-wrap gap-2 items-center">
+                            <div className="flex flex-wrap gap-2 flex-1">
+                                <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded shadow text-xs">{selectedCity}</span>
+                            </div>
+                        </div>
+                    )}
+                </>
             )}
         </>
     );

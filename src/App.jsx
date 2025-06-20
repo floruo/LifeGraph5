@@ -63,6 +63,7 @@ const App = () => {
     const [allCategories, setAllCategories] = useState([]);
     const [loadingCategories, setLoadingCategories] = useState(true);
     const [selectedCategories, setSelectedCategories] = useState([]);
+    const [forceFetchCategories, setForceFetchCategories] = useState(false);
 
     // State for URI overlay
     const [overlayImageUrl, setOverlayImageUrl] = useState(null);
@@ -312,14 +313,14 @@ const App = () => {
                     <CollapsiblePanel title="Tags" forceCollapse={collapseAllFilters}>
                         <TagSelector
                             allTags={allTags}
-                            loading={loadingTags}
+                            loadingTags={loadingTags}
                             selectedTags={selectedTags}
                             setSelectedTags={setSelectedTags}
                             tagSearch={tagSearch}
                             setTagSearch={setTagSearch}
                             forceFetchTags={forceFetchTags}
                             setForceFetchTags={setForceFetchTags}
-                            fetchAllTags={fetchAllTags}
+                            fetchAllTags={(force = false) => setForceFetchTags(force)}
                         />
                     </CollapsiblePanel>
                 );
@@ -328,7 +329,7 @@ const App = () => {
                     <CollapsiblePanel title="Country" forceCollapse={collapseAllFilters}>
                         <CountrySelector
                             allCountries={allCountries}
-                            loading={loadingCountries}
+                            loadingCountries={loadingCountries}
                             setLoadingCountries={setLoadingCountries}
                             selectedCountry={selectedCountry}
                             setSelectedCountry={setSelectedCountry}
@@ -336,7 +337,7 @@ const App = () => {
                             setCountrySearch={setCountrySearch}
                             forceFetchCountries={forceFetchCountries}
                             setForceFetchCountries={setForceFetchCountries}
-                            fetchAllCountries={fetchAllCountries}
+                            fetchAllCountries={(force = false) => setForceFetchCountries(force)}
                         />
                     </CollapsiblePanel>
                 );
@@ -351,7 +352,7 @@ const App = () => {
                             setSelectedCity={setSelectedCity}
                             citySearch={citySearch}
                             setCitySearch={setCitySearch}
-                            fetchAllCities={(force = false) => fetchAllCities(setAllCities, setLoadingCities, force)}
+                            fetchAllCities={(force = false) => setForceFetchCities(force)}
                         />
                     </CollapsiblePanel>
                 );
@@ -390,7 +391,7 @@ const App = () => {
                             loading={loadingCategories}
                             selectedCategories={selectedCategories}
                             setSelectedCategories={setSelectedCategories}
-                            fetchAllCategories={fetchAllCategories}
+                            fetchAllCategories={(force = false) => setForceFetchCategories(force)}
                         />
                     </CollapsiblePanel>
                 );
@@ -529,8 +530,9 @@ const App = () => {
 
     // useEffect to fetch all categories once on component mount
     useEffect(() => {
-        fetchAllCategories(setAllCategories, setLoadingCategories);
-    }, []);
+        fetchAllCategories(setAllCategories, setLoadingCategories, forceFetchCategories);
+        if (forceFetchCategories) setForceFetchCategories(false);
+    }, [forceFetchCategories]);
 
     // Handler for URI overlay
     const handleImageClick = (originalUri) => {
