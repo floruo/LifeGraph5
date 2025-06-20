@@ -1,13 +1,8 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 
 const TagSelector = ({
     selectedTags, setSelectedTags, queryMode, setQueryMode, loadingTags, setLoadingTags, allTags, setAllTags, tagSearch, setTagSearch, fetchAllTags
 }) => {
-    useEffect(() => {
-        fetchAllTags(false);
-        // eslint-disable-next-line
-    }, []);
-
     const handleTagSearchChange = (event) => {
         setTagSearch(event.target.value.toLowerCase());
     };

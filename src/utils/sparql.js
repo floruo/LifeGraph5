@@ -1,4 +1,3 @@
-// sparql.js
 // Generic SPARQL utility functions for the app
 
 export const sparqlEndpointUrl = 'http://localhost:8080/query/sparql';
@@ -18,7 +17,16 @@ export const executeSparqlQuery = async (sparqlQuery) => {
     return data.results && data.results.bindings ? data.results.bindings : [];
 };
 
+// Locks to prevent duplicate API calls
+let tagsFetchInProgress = false;
+let countriesFetchInProgress = false;
+let categoriesFetchInProgress = false;
+let citiesFetchInProgress = false;
+let dayRangeFetchInProgress = false;
+
 export const fetchAllTags = async (setAllTags, setLoadingTags, force = false) => {
+    if (tagsFetchInProgress) return;
+    tagsFetchInProgress = true;
     const cacheKey = 'allLscTags';
     setLoadingTags(true);
     try {
@@ -33,6 +41,7 @@ export const fetchAllTags = async (setAllTags, setLoadingTags, force = false) =>
             if (cachedTags) {
                 const tags = JSON.parse(cachedTags).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
                 setAllTags(tags);
+                setLoadingTags(false);
                 return;
             }
         }
@@ -60,14 +69,18 @@ export const fetchAllTags = async (setAllTags, setLoadingTags, force = false) =>
         } catch (e) {
             console.error('Could not save tags to localStorage:', e);
         }
-    } catch (err) {
-        console.error('Error fetching tags for autocomplete:', err);
+    } catch (e) {
+        setAllTags([]);
+        console.error('Error fetching tags:', e);
     } finally {
         setLoadingTags(false);
+        tagsFetchInProgress = false;
     }
 };
 
 export const fetchAllCountries = async (setAllCountries, setLoadingCountries, force = false) => {
+    if (countriesFetchInProgress) return;
+    countriesFetchInProgress = true;
     const cacheKey = 'allLscCountries';
     setLoadingCountries(true);
     try {
@@ -82,6 +95,7 @@ export const fetchAllCountries = async (setAllCountries, setLoadingCountries, fo
             if (cachedCountries) {
                 const countries = JSON.parse(cachedCountries).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
                 setAllCountries(countries);
+                setLoadingCountries(false);
                 return;
             }
         }
@@ -110,10 +124,13 @@ export const fetchAllCountries = async (setAllCountries, setLoadingCountries, fo
         console.error('Error fetching countries for autocomplete:', err);
     } finally {
         setLoadingCountries(false);
+        countriesFetchInProgress = false;
     }
 };
 
 export const fetchAllCategories = async (setAllCategories, setLoadingCategories, force = false) => {
+    if (categoriesFetchInProgress) return;
+    categoriesFetchInProgress = true;
     const cacheKey = 'allLscCategories';
     setLoadingCategories(true);
     try {
@@ -154,10 +171,13 @@ export const fetchAllCategories = async (setAllCategories, setLoadingCategories,
         console.error('Error fetching categories:', e);
     } finally {
         setLoadingCategories(false);
+        categoriesFetchInProgress = false;
     }
 };
 
 export const fetchAllCities = async (setAllCities, setLoadingCities, force = false) => {
+    if (citiesFetchInProgress) return;
+    citiesFetchInProgress = true;
     const cacheKey = 'allLscCities';
     setLoadingCities(true);
     try {
@@ -203,23 +223,30 @@ export const fetchAllCities = async (setAllCities, setLoadingCities, force = fal
         setAllCities([]);
     } finally {
         setLoadingCities(false);
+        citiesFetchInProgress = false;
     }
 };
 
 // Fetch and cache the day range, ensuring only one API call is made at a time
 let dayRangePromise = null;
 export const fetchDayRange = async (force = false) => {
+    if (dayRangeFetchInProgress) return;
+    dayRangeFetchInProgress = true;
     const cacheKey = 'allLscDayRange';
     if (!force) {
         const cached = localStorage.getItem(cacheKey);
         if (cached) {
             try {
+                dayRangeFetchInProgress = false;
                 return JSON.parse(cached);
             } catch (e) {
                 // ignore parse error, fall through to fetch
             }
         }
-        if (dayRangePromise) return dayRangePromise;
+        if (dayRangePromise) {
+            dayRangeFetchInProgress = false;
+            return dayRangePromise;
+        }
     } else {
         try {
             localStorage.removeItem(cacheKey);
@@ -236,8 +263,9 @@ export const fetchDayRange = async (force = false) => {
             }
         `;
         const bindings = await executeSparqlQuery(query);
+        let result;
         if (bindings.length > 0) {
-            const result = {
+            result = {
                 min: bindings[0].minDate.value.replace('http://lsc.dcu.ie/day#', ''),
                 max: bindings[0].maxDate.value.replace('http://lsc.dcu.ie/day#', ''),
             };
@@ -246,11 +274,12 @@ export const fetchDayRange = async (force = false) => {
             } catch (e) {
                 // ignore
             }
-            dayRangePromise = null;
-            return result;
+        } else {
+            result = { min: '2019-01-01', max: '2019-12-31' };
         }
+        dayRangeFetchInProgress = false;
         dayRangePromise = null;
-        return { min: '2019-01-01', max: '2019-12-31' };
+        return result;
     })();
     return dayRangePromise;
 };

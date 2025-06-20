@@ -1,12 +1,8 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 
 const CitySelector = ({
     selectedCity, setSelectedCity, loadingCities, setLoadingCities, allCities, setAllCities, citySearch, setCitySearch, fetchAllCities
 }) => {
-    useEffect(() => {
-        fetchAllCities(); // Only use cache on mount
-        // eslint-disable-next-line
-    }, []);
 
     const handleCitySearchChange = (event) => {
         setCitySearch(event.target.value);

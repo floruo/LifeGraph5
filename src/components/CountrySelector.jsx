@@ -1,12 +1,8 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 
 const CountrySelector = ({
     selectedCountry, setSelectedCountry, loadingCountries, setLoadingCountries, allCountries, setAllCountries, countrySearch, setCountrySearch, fetchAllCountries
 }) => {
-    useEffect(() => {
-        fetchAllCountries(false);
-        // eslint-disable-next-line
-    }, []);
 
     const handleCountrySearchChange = (event) => {
         setCountrySearch(event.target.value);

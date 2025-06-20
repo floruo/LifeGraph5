@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 
 const CategorySelector = ({
   selectedCategories,
@@ -8,11 +8,6 @@ const CategorySelector = ({
   fetchAllCategories,
 }) => {
   const [categorySearch, setCategorySearch] = React.useState("");
-
-  useEffect(() => {
-    fetchAllCategories(false);
-    // eslint-disable-next-line
-  }, []);
 
   const handleCategorySearchChange = (event) => {
     setCategorySearch(event.target.value.toLowerCase());
