@@ -15,7 +15,7 @@ const filterOrder = [
 ];
 
 // CollapsiblePanel component for left/right columns
-const CollapsiblePanel = ({ title, children, defaultOpen = true, className = "", forceCollapse }) => {
+const CollapsiblePanel = ({ title, children, defaultOpen = false, className = "", forceCollapse }) => {
     const [open, setOpen] = useState(defaultOpen);
     useEffect(() => {
         if (forceCollapse === true) setOpen(false);
@@ -102,13 +102,24 @@ const App = () => {
     // State for month filter (multi-select)
     const [selectedMonths, setSelectedMonths] = useState([]);
 
+    // State for grouping by day (default true)
+    const [groupByDay, setGroupByDay] = useState(true);
+
+    // Handler for toggling groupByDay
+    const handleGroupByDayChange = (e) => {
+        setGroupByDay(e.target.checked);
+    };
+
     // Store the latest SPARQL query for live display
     const [liveSparqlQuery, setLiveSparqlQuery] = useState('');
 
-    // Update the live SPARQL query whenever filters change
+    // Track if component has mounted to avoid fetching on first render
+    const hasMounted = React.useRef(false);
+
+    // Update the live SPARQL query whenever filters or groupByDay change
     useEffect(() => {
         setLiveSparqlQuery(getSparqlQuery());
-    }, [selectedTags, selectedCountry, includeStartDay, includeEndDay, startDay, endDay, selectedWeekdays, selectedYears, queryMode, selectedMonths, selectedCategories]);
+    }, [selectedTags, selectedCountry, includeStartDay, includeEndDay, startDay, endDay, selectedWeekdays, selectedYears, queryMode, selectedMonths, selectedCategories, groupByDay]);
 
     // Fetch min/max day from SPARQL endpoint on mount or when forceFetchDayRange changes
     useEffect(() => {
@@ -133,7 +144,6 @@ const App = () => {
     // Function to fetch data from the SPARQL endpoint based on the constructed query
     const fetchImageUris = async () => {
         const sparqlQuery = getSparqlQuery();
-        // Always update the query area when query changes
         setShowSparql(true);
         if (!sparqlQuery) {
             setImageUris([]);
@@ -150,9 +160,13 @@ const App = () => {
             const bindings = await executeSparqlQuery(sparqlQuery);
             const end = performance.now();
             setQueryTime(end - start);
+            // Map to array of { uri, day }
             const uris = bindings
-                .map(binding => binding.s?.value)
-                .filter(Boolean);
+                .map(binding => ({
+                    uri: binding.s?.value,
+                    day: binding.day?.value
+                }))
+                .filter(obj => obj.uri);
             setImageUris(uris);
         } catch (err) {
             console.error('Error fetching image data:', err);
@@ -295,6 +309,7 @@ const App = () => {
                         <CountrySelector
                             allCountries={allCountries}
                             loading={loadingCountries}
+                            setLoadingCountries={setLoadingCountries}
                             selectedCountry={selectedCountry}
                             setSelectedCountry={setSelectedCountry}
                             countrySearch={countrySearch}
@@ -384,18 +399,29 @@ const App = () => {
                 categoryPrefixes.forEach(p => pushUnique(prefixes, p));
             }
         });
+        // Only add the day triple if groupByDay is true and it is not already present from the date block
+        const dayTriple = '  ?s lsc:day ?day .';
+        const whereClausesString = whereClauses.join('\n');
+        if (groupByDay && !whereClausesString.includes(dayTriple.trim())) {
+            whereClauses.push(dayTriple);
+        }
         prefixes = prefixes.sort((a, b) => a.localeCompare(b));
+        // Select clause depends on groupByDay
+        const selectClause = groupByDay ? 'SELECT DISTINCT ?s ?day' : 'SELECT DISTINCT ?s';
         return [
             ...prefixes,
             '',
-            'SELECT DISTINCT ?s',
+            selectClause,
             'WHERE {',
             whereClauses.join('\n'),
             '}'
         ].join('\n');
     };
 
-    // useEffect to clear filters on initial mount
+    // useRef to prevent fetch on initial mount or reload
+    const didMount = React.useRef(false);
+
+    // useEffect to clear filters on initial mount or reload
     useEffect(() => {
         setSelectedTags([]);
         setSelectedCountry('');
@@ -410,12 +436,19 @@ const App = () => {
         setImageUris([]);
         setError(null);
         setQueryTime(null);
-        // Do not trigger fetch on mount
-    }, []);
+        setSelectedYears([]);
+        setSelectedMonths([]);
+        setSelectedCategories([]);
+        setGroupByDay(true);
+        didMount.current = true;
+        // Do not trigger fetch on mount or reload
+    }, [minDay, maxDay]);
 
     // useEffect to trigger the fetch function whenever 'triggerFetch' state changes
     useEffect(() => {
-        fetchImageUris();
+        if (didMount.current) {
+            fetchImageUris();
+        }
         // eslint-disable-next-line
     }, [triggerFetch]);
 
@@ -505,6 +538,27 @@ const App = () => {
 
     const [fullscreenResults, setFullscreenResults] = useState(false);
 
+    // Helper to group imageUris by year, month, day (with correct ordering)
+    function groupByYearMonthDay(imageUris) {
+        const groups = {};
+        imageUris.forEach(obj => {
+            let dateStr = obj.day ? obj.day.replace('http://lsc.dcu.ie/day#', '') : 'Unknown Day';
+            let year = 'Unknown Year', month = 'Unknown Month', day = 'Unknown Day';
+            if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+                [year, month, day] = dateStr.split('-');
+            } else if (/^\d{4}-\d{2}$/.test(dateStr)) {
+                [year, month] = dateStr.split('-');
+            } else if (/^\d{4}$/.test(dateStr)) {
+                year = dateStr;
+            }
+            if (!groups[year]) groups[year] = {};
+            if (!groups[year][month]) groups[year][month] = {};
+            if (!groups[year][month][dateStr]) groups[year][month][dateStr] = [];
+            groups[year][month][dateStr].push(obj.uri);
+        });
+        return groups;
+    }
+
     return (
         <div className="min-h-screen bg-gray-100 flex flex-col items-center p-4 font-inter">
             <div className="bg-white p-8 rounded-lg shadow-xl w-full h-full">
@@ -541,19 +595,30 @@ const App = () => {
                         {/* Query area at the top */}
                         <div className="w-full flex justify-center">
                             <div className="w-1/2 flex flex-col items-center">
-                                <button
-                                    onClick={handleSearchClick}
-                                    className="mb-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-md shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-150 ease-in-out w-full max-w-xs"
-                                    disabled={
-                                        loadingTags ||
-                                        loading ||
-                                        (
-                                            !getSparqlQuery()
-                                        )
-                                    }
-                                >
-                                    {loadingTags ? "Loading ..." : "Query"}
-                                </button>
+                                <div className="flex flex-row items-center gap-2 w-full mb-2">
+                                    <button
+                                        onClick={handleSearchClick}
+                                        className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-md shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-150 ease-in-out w-full max-w-xs"
+                                        disabled={
+                                            loadingTags ||
+                                            loading ||
+                                            (
+                                                !getSparqlQuery()
+                                            )
+                                        }
+                                    >
+                                        {loadingTags ? "Loading ..." : "Query"}
+                                    </button>
+                                    <label className="flex items-center text-xs ml-2">
+                                        <input
+                                            type="checkbox"
+                                            checked={groupByDay}
+                                            onChange={handleGroupByDayChange}
+                                            className="mr-1"
+                                        />
+                                        Group by Day
+                                    </label>
+                                </div>
                                 {/* Collapsible SPARQL Query area */}
                                 <div className="w-full">
                                     <button
@@ -594,7 +659,7 @@ const App = () => {
                         {/* Results area below */}
                         <div className={`w-full flex-1${fullscreenResults ? ' fixed inset-0 z-50 bg-white p-8 overflow-auto' : ''}`}>
                             {imageUris.length > 0 && (
-                                <div className="w-full flex justify-end mb-2">
+                                <div className="w-full flex justify-end mb-2 gap-2">
                                     <button
                                         className={`px-3 py-1 rounded shadow text-xs transition ${fullscreenResults ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}
                                         onClick={() => setFullscreenResults(f => !f)}
@@ -619,21 +684,101 @@ const App = () => {
                             {!loading && !error && (
                                 <div className="w-full">
                                     {imageUris.length > 0 ? (
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                                            {imageUris.map((uri, index) => (
-                                                <div
-                                                    key={index}
-                                                    className="bg-gray-100 p-2 rounded-lg shadow flex justify-center items-center overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-200"
-                                                    onClick={() => handleImageClick(uri)}
-                                                >
-                                                    <span className="break-all text-xs text-blue-700 underline">{uri}</span>
-                                                </div>
-                                            ))}
-                                        </div>
+                                        groupByDay ? (
+                                            (() => {
+                                                const groups = groupByYearMonthDay(imageUris);
+                                                const years = Object.keys(groups);
+                                                // Helper to render days
+                                                const renderDays = (daysObj) => {
+                                                    const days = Object.keys(daysObj);
+                                                    if (days.length > 1) {
+                                                        return days.map(day => (
+                                                            <CollapsiblePanel key={day} title={day} defaultOpen={false} className="w-full !max-w-none">
+                                                                <div className="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                                                    {daysObj[day].map((uri, index) => (
+                                                                        <div
+                                                                            key={index}
+                                                                            className="bg-gray-100 p-2 rounded-lg shadow flex justify-center items-center overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-200"
+                                                                            onClick={() => handleImageClick(uri)}
+                                                                        >
+                                                                            <span className="break-all text-xs text-blue-700 underline">{uri}</span>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </CollapsiblePanel>
+                                                        ));
+                                                    } else if (days.length === 1) {
+                                                        return (
+                                                            <div className="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                                                {daysObj[days[0]].map((uri, index) => (
+                                                                    <div
+                                                                        key={index}
+                                                                        className="bg-gray-100 p-2 rounded-lg shadow flex justify-center items-center overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-200"
+                                                                        onClick={() => handleImageClick(uri)}
+                                                                    >
+                                                                        <span className="break-all text-xs text-blue-700 underline">{uri}</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        );
+                                                    } else {
+                                                        return null;
+                                                    }
+                                                };
+                                                // Helper to render months
+                                                const renderMonths = (monthsObj) => {
+                                                    // Sort months as numbers if possible, fallback to string
+                                                    const months = Object.keys(monthsObj).sort((a, b) => {
+                                                        // Try to parse as month (01-12)
+                                                        const aNum = /^\d{2}$/.test(a) ? parseInt(a, 10) : a;
+                                                        const bNum = /^\d{2}$/.test(b) ? parseInt(b, 10) : b;
+                                                        if (typeof aNum === 'number' && typeof bNum === 'number') {
+                                                            return aNum - bNum;
+                                                        }
+                                                        return String(a).localeCompare(String(b));
+                                                    });
+                                                    if (months.length > 1) {
+                                                        return months.map(month => (
+                                                            <CollapsiblePanel key={month} title={month} defaultOpen={false} className="w-full !max-w-none">
+                                                                {renderDays(monthsObj[month])}
+                                                            </CollapsiblePanel>
+                                                        ));
+                                                    } else if (months.length === 1) {
+                                                        return renderDays(monthsObj[months[0]]);
+                                                    } else {
+                                                        return null;
+                                                    }
+                                                };
+                                                // Render years
+                                                if (years.length > 1) {
+                                                    return years.map(year => (
+                                                        <CollapsiblePanel key={year} title={year} defaultOpen={false} className="w-full !max-w-none">
+                                                            {renderMonths(groups[year])}
+                                                        </CollapsiblePanel>
+                                                    ));
+                                                } else if (years.length === 1) {
+                                                    return renderMonths(groups[years[0]]);
+                                                } else {
+                                                    return null;
+                                                }
+                                            })()
+                                        ) : (
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                                {imageUris.map((obj, index) => (
+                                                    <div
+                                                        key={index}
+                                                        className="bg-gray-100 p-2 rounded-lg shadow flex justify-center items-center overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-200"
+                                                        onClick={() => handleImageClick(obj.uri)}
+                                                    >
+                                                        <span className="break-all text-xs text-blue-700 underline">{obj.uri}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )
                                     ) : (
-                                        selectedTags.length > 0 && triggerFetch > 0
-                                            ? <p className="text-center text-gray-600 text-lg">No image URIs found for selected tags.</p>
-                                            : null
+                                        (selectedTags.length > 0 && triggerFetch > 0) ? (
+                                            <p className="text-center text-gray-600 text-lg">No image URIs found for selected tags.</p>
+                                        ) : null
                                     )}
                                 </div>
                             )}
@@ -666,7 +811,3 @@ const App = () => {
 };
 
 export default App;
-
-// Add global styles to make the app use the entire screen
-// This can be done by setting height: 100vh and width: 100vw on the root div
-// and ensuring body/html are also set to 100% height in index.css
