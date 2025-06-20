@@ -133,6 +133,41 @@ const DateSelector = ({ minDate, maxDate, startDate, endDate, setStartDate, setE
         setWeekdayRange([null, null]);
     };
 
+    // New: Range selection state
+    const [rangeType, setRangeType] = React.useState('none'); // none, 0, 1, 7, 30, custom
+    const [customDays, setCustomDays] = React.useState(1);
+
+    // Helper to add days or months to a date string (yyyy-mm-dd)
+    const addDaysOrMonth = (dateStr, days, addMonth = false) => {
+        const d = new Date(dateStr);
+        if (addMonth) {
+            d.setMonth(d.getMonth() + 1);
+        } else {
+            d.setDate(d.getDate() + days);
+        }
+        return d.toISOString().slice(0, 10);
+    };
+
+    // Update end date when rangeType or startDate changes
+    React.useEffect(() => {
+        if (rangeType === 'none') return;
+        let days = 0;
+        let addMonth = false;
+        if (rangeType === '0') days = 0;
+        else if (rangeType === '1') days = 1;
+        else if (rangeType === '7') days = 7;
+        else if (rangeType === '30') addMonth = true;
+        else if (rangeType === 'custom') days = Number(customDays) || 0;
+        const newEnd = addDaysOrMonth(startDate, days, addMonth);
+        if (isValidDate(newEnd) && newEnd <= maxDate) {
+            setEndDate(newEnd);
+            if (includeStartDay && !includeEndDay) setIncludeEndDay(true); // only auto-check end if start is checked
+        } else if (isValidDate(newEnd) && newEnd > maxDate) {
+            setEndDate(maxDate);
+            if (includeStartDay && !includeEndDay) setIncludeEndDay(true);
+        }
+    }, [rangeType, customDays, startDate]);
+
     return (
         <div className="flex flex-col gap-4 w-full">
             <div className="flex flex-row items-center gap-2 mb-2">
@@ -166,6 +201,33 @@ const DateSelector = ({ minDate, maxDate, startDate, endDate, setStartDate, setE
                             onChange={handleStartChange}
                             className="w-full px-2 py-1 border rounded"
                         />
+                    </div>
+                    {/* New: Range selector below start date, aligned with date fields */}
+                    <div className="flex flex-row items-center gap-2 mb-2">
+                        <span className="text-xs font-medium mr-2 min-w-[40px] text-right">Range:</span>
+                        <select
+                            className="w-full px-2 py-1 border rounded text-xs"
+                            value={rangeType}
+                            onChange={e => setRangeType(e.target.value)}
+                        >
+                            <option value="none">Set range...</option>
+                            <option value="0">+0 days</option>
+                            <option value="1">+1 day</option>
+                            <option value="7">+1 week</option>
+                            <option value="30">+1 month</option>
+                            <option value="custom">Custom days</option>
+                        </select>
+                        {rangeType === 'custom' && (
+                            <input
+                                type="number"
+                                min="0"
+                                max="365"
+                                value={customDays}
+                                onChange={e => setCustomDays(e.target.value)}
+                                className="ml-1 w-16 px-1 py-1 border rounded text-xs"
+                                placeholder="days"
+                            />
+                        )}
                     </div>
                     <div className="flex flex-row items-center gap-2 mb-4">
                         <input

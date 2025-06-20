@@ -307,7 +307,7 @@ const App = () => {
                 );
             case 'date':
                 return (
-                    <CollapsiblePanel title="Date/Time" forceCollapse={collapseAllFilters}>
+                    <CollapsiblePanel title="Date" forceCollapse={collapseAllFilters}>
                         <DateSelector
                             minDate={minDay}
                             maxDate={maxDay}
