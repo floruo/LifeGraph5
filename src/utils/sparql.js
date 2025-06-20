@@ -157,6 +157,55 @@ export const fetchAllCategories = async (setAllCategories, setLoadingCategories,
     }
 };
 
+export const fetchAllCities = async (setAllCities, setLoadingCities, force = false) => {
+    const cacheKey = 'allLscCities';
+    setLoadingCities(true);
+    try {
+        if (force) {
+            try {
+                localStorage.removeItem(cacheKey);
+            } catch (e) {
+                console.error('Could not remove cities from localStorage:', e);
+            }
+        } else {
+            const cachedCities = localStorage.getItem(cacheKey);
+            if (cachedCities) {
+                const cities = JSON.parse(cachedCities).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+                setAllCities(cities);
+                setLoadingCities(false);
+                return;
+            }
+        }
+        const citiesQuery = `
+            SELECT DISTINCT ?city
+            WHERE {
+                ?s <http://lsc.dcu.ie/schema#city> ?city .
+            }
+        `;
+        const bindings = await executeSparqlQuery(citiesQuery);
+        const cities = bindings
+            .map(binding => {
+                const fullCity = binding.city?.value;
+                if (!fullCity) return null;
+                // Remove datatype if present (e.g., ^^String)
+                return fullCity.split('^^')[0].trim();
+            })
+            .filter(Boolean)
+            .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+        setAllCities(cities);
+        try {
+            localStorage.setItem(cacheKey, JSON.stringify(cities));
+        } catch (e) {
+            console.error('Could not save cities to localStorage:', e);
+        }
+    } catch (err) {
+        console.error('Error fetching cities for autocomplete:', err);
+        setAllCities([]);
+    } finally {
+        setLoadingCities(false);
+    }
+};
+
 // Fetch and cache the day range, ensuring only one API call is made at a time
 let dayRangePromise = null;
 export const fetchDayRange = async (force = false) => {

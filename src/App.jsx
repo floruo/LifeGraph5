@@ -4,13 +4,15 @@ import TagSelector from './components/TagSelector';
 import CountrySelector from './components/CountrySelector';
 import DateSelector from './components/DateSelector.jsx';
 import CategorySelector from './components/CategorySelector';
-import { executeSparqlQuery, fetchAllTags, fetchAllCountries, fetchDayRange, fetchAllCategories } from './utils/sparql';
+import CitySelector from './components/CitySelector';
+import { executeSparqlQuery, fetchAllTags, fetchAllCountries, fetchDayRange, fetchAllCategories, fetchAllCities } from './utils/sparql';
 
 // Configurable filter order
 const filterOrder = [
     'tags',
     'category',
     'country',
+    'city',
     'date',
 ];
 
@@ -49,6 +51,13 @@ const App = () => {
     const [selectedCountry, setSelectedCountry] = useState('');
     const [countrySearch, setCountrySearch] = useState('');
     const [forceFetchCountries, setForceFetchCountries] = useState(false);
+
+    // City selector state
+    const [allCities, setAllCities] = useState([]);
+    const [loadingCities, setLoadingCities] = useState(true);
+    const [selectedCity, setSelectedCity] = useState('');
+    const [citySearch, setCitySearch] = useState('');
+    const [forceFetchCities, setForceFetchCities] = useState(false);
 
     // Category selector state
     const [allCategories, setAllCategories] = useState([]);
@@ -119,7 +128,7 @@ const App = () => {
     // Update the live SPARQL query whenever filters or groupByDay change
     useEffect(() => {
         setLiveSparqlQuery(getSparqlQuery());
-    }, [selectedTags, selectedCountry, includeStartDay, includeEndDay, startDay, endDay, selectedWeekdays, selectedYears, queryMode, selectedMonths, selectedCategories, groupByDay]);
+    }, [selectedTags, selectedCountry, selectedCity, includeStartDay, includeEndDay, startDay, endDay, selectedWeekdays, selectedYears, queryMode, selectedMonths, selectedCategories, groupByDay]);
 
     // Fetch min/max day from SPARQL endpoint on mount or when forceFetchDayRange changes
     useEffect(() => {
@@ -212,6 +221,17 @@ const App = () => {
             countryClauses.push(`  {\n    ?s lsc:country \"${selectedCountry.replace(/\"/g, '\\"')}\" .\n  }`);
         }
         return { countryClauses, countryPrefixes };
+    };
+
+    // City filter block
+    const getCityBlock = () => {
+        let cityClauses = [];
+        let cityPrefixes = [];
+        if (selectedCity) {
+            pushUnique(cityPrefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
+            cityClauses.push(`  {\n    ?s lsc:city \"${selectedCity.replace(/\"/g, '\\"')}\" .\n  }`);
+        }
+        return { cityClauses, cityPrefixes };
     };
 
     // Date, Year, Month, Weekday block
@@ -320,6 +340,21 @@ const App = () => {
                         />
                     </CollapsiblePanel>
                 );
+            case 'city':
+                return (
+                    <CollapsiblePanel title="City" forceCollapse={collapseAllFilters}>
+                        <CitySelector
+                            allCities={allCities}
+                            loadingCities={loadingCities}
+                            setLoadingCities={setLoadingCities}
+                            selectedCity={selectedCity}
+                            setSelectedCity={setSelectedCity}
+                            citySearch={citySearch}
+                            setCitySearch={setCitySearch}
+                            fetchAllCities={(force = false) => fetchAllCities(setAllCities, setLoadingCities, force)}
+                        />
+                    </CollapsiblePanel>
+                );
             case 'date':
                 return (
                     <CollapsiblePanel title="Date" forceCollapse={collapseAllFilters}>
@@ -369,6 +404,7 @@ const App = () => {
         if (
             selectedTags.length === 0 &&
             !selectedCountry &&
+            !selectedCity &&
             !includeStartDay &&
             !includeEndDay &&
             selectedWeekdays.length === 0 &&
@@ -389,6 +425,10 @@ const App = () => {
                 const { countryClauses, countryPrefixes } = getCountryBlock();
                 whereClauses.push(...countryClauses);
                 countryPrefixes.forEach(p => pushUnique(prefixes, p));
+            } else if (type === 'city') {
+                const { cityClauses, cityPrefixes } = getCityBlock();
+                whereClauses.push(...cityClauses);
+                cityPrefixes.forEach(p => pushUnique(prefixes, p));
             } else if (type === 'date') {
                 const { dateClauses, datePrefixes } = getDateBlock();
                 whereClauses.push(...dateClauses);
@@ -427,6 +467,7 @@ const App = () => {
         setSelectedCountry('');
         setTagSearch('');
         setCountrySearch('');
+        setCitySearch('');
         setStartDay(minDay);
         setEndDay(maxDay);
         setIncludeStartDay(false);
@@ -439,6 +480,7 @@ const App = () => {
         setSelectedYears([]);
         setSelectedMonths([]);
         setSelectedCategories([]);
+        setSelectedCity('');
         setGroupByDay(true);
         didMount.current = true;
         // Do not trigger fetch on mount or reload
@@ -478,6 +520,13 @@ const App = () => {
         // eslint-disable-next-line
     }, [forceFetchCountries]);
 
+    // useEffect to fetch all cities from imageUris (or your data source)
+    useEffect(() => {
+        fetchAllCities(setAllCities, setLoadingCities, forceFetchCities);
+        if (forceFetchCities) setForceFetchCities(false);
+        // eslint-disable-next-line
+    }, [forceFetchCities]);
+
     // useEffect to fetch all categories once on component mount
     useEffect(() => {
         fetchAllCategories(setAllCategories, setLoadingCategories);
@@ -512,6 +561,8 @@ const App = () => {
         setSelectedCountry('');
         setTagSearch('');
         setCountrySearch('');
+        setCitySearch('');
+        setSelectedCity('');
         setStartDay(minDay);
         setEndDay(maxDay);
         setIncludeStartDay(false);
