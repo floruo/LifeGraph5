@@ -15,8 +15,11 @@ const filterOrder = [
 ];
 
 // CollapsiblePanel component for left/right columns
-const CollapsiblePanel = ({ title, children, defaultOpen = true, className = "" }) => {
+const CollapsiblePanel = ({ title, children, defaultOpen = true, className = "", forceCollapse }) => {
     const [open, setOpen] = useState(defaultOpen);
+    useEffect(() => {
+        if (forceCollapse === true) setOpen(false);
+    }, [forceCollapse]);
     return (
         <div className={`bg-gray-50 rounded-lg shadow-md p-4 w-full max-w-xs flex flex-col items-start ${className}`}>
             <button
@@ -272,7 +275,7 @@ const App = () => {
         switch (type) {
             case 'tags':
                 return (
-                    <CollapsiblePanel title="Tags">
+                    <CollapsiblePanel title="Tags" forceCollapse={collapseAllFilters}>
                         <TagSelector
                             allTags={allTags}
                             loading={loadingTags}
@@ -288,7 +291,7 @@ const App = () => {
                 );
             case 'country':
                 return (
-                    <CollapsiblePanel title="Country">
+                    <CollapsiblePanel title="Country" forceCollapse={collapseAllFilters}>
                         <CountrySelector
                             allCountries={allCountries}
                             loading={loadingCountries}
@@ -304,7 +307,7 @@ const App = () => {
                 );
             case 'date':
                 return (
-                    <CollapsiblePanel title="Date/Time">
+                    <CollapsiblePanel title="Date/Time" forceCollapse={collapseAllFilters}>
                         <DateSelector
                             minDate={minDay}
                             maxDate={maxDay}
@@ -316,8 +319,11 @@ const App = () => {
                             setIncludeStartDay={setIncludeStartDay}
                             includeEndDay={includeEndDay}
                             setIncludeEndDay={setIncludeEndDay}
+                            onRefreshDayRange={() => setForceFetchDayRange(true)}
                             selectedWeekdays={selectedWeekdays}
                             setSelectedWeekdays={setSelectedWeekdays}
+                            weekdayRange={weekdayRange}
+                            setWeekdayRange={setWeekdayRange}
                             selectedYears={selectedYears}
                             setSelectedYears={setSelectedYears}
                             selectedMonths={selectedMonths}
@@ -328,7 +334,7 @@ const App = () => {
                 );
             case 'category':
                 return (
-                    <CollapsiblePanel title="Category">
+                    <CollapsiblePanel title="Category" forceCollapse={collapseAllFilters}>
                         <CategorySelector
                             categories={allCategories}
                             loading={loadingCategories}
@@ -487,16 +493,34 @@ const App = () => {
         setSelectedCategories([]); // Clear categories as well
     };
 
+    const [collapseAllFilters, setCollapseAllFilters] = useState(false);
+    const [filtersCollapsed, setFiltersCollapsed] = useState(false);
+
+    // Reset collapseAllFilters to false after triggering collapse
+    useEffect(() => {
+        if (collapseAllFilters) {
+            setCollapseAllFilters(false);
+        }
+    }, [collapseAllFilters]);
+
+    const [fullscreenResults, setFullscreenResults] = useState(false);
 
     return (
         <div className="min-h-screen bg-gray-100 flex flex-col items-center p-4 font-inter">
-            <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-7xl">
+            <div className="bg-white p-8 rounded-lg shadow-xl w-full h-full">
                 <h1 className="text-3xl font-bold text-gray-800 mb-6 text-center">
                     LifeGraph 5
                 </h1>
                 <div className="flex flex-row items-start gap-8">
                     <div className="flex flex-col gap-6 max-w-xs w-full">
                         <div className="flex flex-row items-center justify-between">
+                            <button
+                                className="px-2 py-1 bg-gray-200 text-gray-700 rounded shadow hover:bg-gray-300 transition text-xs mr-auto"
+                                onClick={() => setCollapseAllFilters(true)}
+                                type="button"
+                            >
+                                Collapse All Filters
+                            </button>
                             <button
                                 className="px-2 py-1 bg-red-100 text-red-700 rounded shadow hover:bg-red-200 transition text-xs ml-auto"
                                 onClick={handleClearFilters}
@@ -515,58 +539,71 @@ const App = () => {
                     </div>
                     <div className="flex-1 min-w-0 flex flex-col items-center justify-start p-4 bg-gray-50 rounded-lg shadow-md">
                         {/* Query area at the top */}
-                        <div className="w-full flex flex-col items-center mb-6">
-                            <button
-                                onClick={handleSearchClick}
-                                className="mb-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-md shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-150 ease-in-out w-full max-w-xs"
-                                disabled={
-                                    loadingTags ||
-                                    loading ||
-                                    (
-                                        !getSparqlQuery()
-                                    )
-                                }
-                            >
-                                {loadingTags ? "Loading ..." : "Query"}
-                            </button>
-                            {/* Collapsible SPARQL Query area */}
-                            <div className="w-full">
+                        <div className="w-full flex justify-center">
+                            <div className="w-1/2 flex flex-col items-center">
                                 <button
-                                    className="flex items-center gap-2 text-xs text-blue-700 hover:underline focus:outline-none mb-1"
-                                    onClick={() => setShowSparql(v => !v)}
-                                    type="button"
+                                    onClick={handleSearchClick}
+                                    className="mb-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-md shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-150 ease-in-out w-full max-w-xs"
+                                    disabled={
+                                        loadingTags ||
+                                        loading ||
+                                        (
+                                            !getSparqlQuery()
+                                        )
+                                    }
                                 >
-                                    {showSparql ? '▼ Hide SPARQL Query' : '► Show SPARQL Query'}
+                                    {loadingTags ? "Loading ..." : "Query"}
                                 </button>
-                                {showSparql && (
-                                    <div className="w-full bg-white border border-gray-200 rounded p-2 mb-2 text-xs font-mono text-gray-700 whitespace-pre-wrap break-all">
-                                        {liveSparqlQuery || <span className="text-gray-400 italic">No query constructed.</span>}
+                                {/* Collapsible SPARQL Query area */}
+                                <div className="w-full">
+                                    <button
+                                        className="flex items-center gap-2 text-xs text-blue-700 hover:underline focus:outline-none mb-1"
+                                        onClick={() => setShowSparql(v => !v)}
+                                        type="button"
+                                    >
+                                        {showSparql ? '▼ Hide SPARQL Query' : '► Show SPARQL Query'}
+                                    </button>
+                                    {showSparql && (
+                                        <div className="w-full bg-white border border-gray-200 rounded p-2 mb-2 text-xs font-mono text-gray-700 whitespace-pre-wrap break-all">
+                                            {liveSparqlQuery || <span className="text-gray-400 italic">No query constructed.</span>}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="w-full flex flex-row items-center justify-center gap-4 mb-2">
+                                    {imageUris.length > 0 && !loading && !error && (
+                                        <>
+                                            <span className="text-lg font-semibold text-gray-700">{imageUris.length} result{imageUris.length !== 1 ? 's' : ''} found</span>
+                                            <button
+                                                className="px-3 py-1 bg-red-100 text-red-700 rounded shadow hover:bg-red-200 transition text-xs"
+                                                onClick={handleClearResults}
+                                                disabled={loading}
+                                                type="button"
+                                            >
+                                                Clear Results
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                                {queryTime !== null && !loading && !error && (
+                                    <div className="w-full mb-2 text-sm text-gray-500 text-center">
+                                        Query executed in {(queryTime / 1000).toFixed(1)}s
                                     </div>
                                 )}
                             </div>
-                            <div className="w-full flex flex-row items-center justify-center gap-4 mb-2">
-                                {imageUris.length > 0 && !loading && !error && (
-                                    <>
-                                        <span className="text-lg font-semibold text-gray-700">{imageUris.length} result{imageUris.length !== 1 ? 's' : ''} found</span>
-                                        <button
-                                            className="px-3 py-1 bg-red-100 text-red-700 rounded shadow hover:bg-red-200 transition text-xs"
-                                            onClick={handleClearResults}
-                                            disabled={loading}
-                                            type="button"
-                                        >
-                                            Clear Results
-                                        </button>
-                                    </>
-                                )}
-                            </div>
-                            {queryTime !== null && !loading && !error && (
-                                <div className="w-full mb-2 text-sm text-gray-500 text-center">
-                                    Query executed in {(queryTime / 1000).toFixed(1)}s
-                                </div>
-                            )}
                         </div>
                         {/* Results area below */}
-                        <div className="w-full flex-1">
+                        <div className={`w-full flex-1${fullscreenResults ? ' fixed inset-0 z-50 bg-white p-8 overflow-auto' : ''}`}>
+                            {imageUris.length > 0 && (
+                                <div className="w-full flex justify-end mb-2">
+                                    <button
+                                        className={`px-3 py-1 rounded shadow text-xs transition ${fullscreenResults ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}
+                                        onClick={() => setFullscreenResults(f => !f)}
+                                        type="button"
+                                    >
+                                        {fullscreenResults ? 'Exit Fullscreen' : 'Fullscreen Results'}
+                                    </button>
+                                </div>
+                            )}
                             {loading && (
                                 <div className="text-center text-blue-600">
                                     <p>Loading image URIs for selected tags...</p>
@@ -629,3 +666,7 @@ const App = () => {
 };
 
 export default App;
+
+// Add global styles to make the app use the entire screen
+// This can be done by setting height: 100vh and width: 100vw on the root div
+// and ensuring body/html are also set to 100% height in index.css
