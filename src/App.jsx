@@ -577,6 +577,7 @@ const App = () => {
         setSelectedYears([]);
         setSelectedMonths([]);
         setSelectedCategories([]); // Clear categories as well
+        setTriggerFetch(0); // Reset triggerFetch so 'no results' message vanishes
     };
 
     const [collapseAllFilters, setCollapseAllFilters] = useState(false);
@@ -754,6 +755,11 @@ const App = () => {
                                     <span className="block sm:inline"> {error}</span>
                                 </div>
                             )}
+                            {!loading && !error && imageUris.length === 0 && triggerFetch > 0 && (
+                                <div className="w-full flex flex-col items-center justify-center py-12">
+                                    <p className="text-center text-gray-600 text-lg">No results found.</p>
+                                </div>
+                            )}
                             {!loading && !error && (
                                 <div className="w-full">
                                     {imageUris.length > 0 ? (
@@ -865,7 +871,7 @@ const App = () => {
                                         )
                                     ) : (
                                         (selectedTags.length > 0 && triggerFetch > 0) ? (
-                                            <p className="text-center text-gray-600 text-lg">No image URIs found for selected tags.</p>
+                                            <span></span>
                                         ) : null
                                     )}
                                 </div>
