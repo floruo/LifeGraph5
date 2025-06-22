@@ -170,10 +170,11 @@ const App = () => {
             const bindings = await executeSparqlQuery(sparqlQuery);
             const end = performance.now();
             setQueryTime(end - start);
-            // Map to array of { uri, day }
+            // Map to array of { uri, id, day }
             const uris = bindings
                 .map(binding => ({
                     uri: binding.s?.value,
+                    id: binding.id?.value,
                     day: binding.day?.value
                 }))
                 .filter(obj => obj.uri);
@@ -450,12 +451,13 @@ const App = () => {
         }
         prefixes = prefixes.sort((a, b) => a.localeCompare(b));
         // Select clause depends on groupByDay
-        const selectClause = groupByDay ? 'SELECT DISTINCT ?s ?day' : 'SELECT DISTINCT ?s';
+        const selectClause = groupByDay ? 'SELECT DISTINCT ?s ?id ?day' : 'SELECT DISTINCT ?s ?id';
         return [
             ...prefixes,
             '',
             selectClause,
             'WHERE {',
+            '   ?s lsc:id ?id .',
             whereClauses.join('\n'),
             '}'
         ].join('\n');
@@ -898,7 +900,14 @@ const App = () => {
                         >
                             &times;
                         </button>
-                        <div className="flex items-center justify-center w-full mt-8 mb-2">
+                        {/* Show the ID as the title above the image */}
+                        {(() => {
+                            const currentObj = imageUris.find(obj => obj.uri === overlayImageUrl);
+                            return currentObj && currentObj.id ? (
+                                <div className="text-xl font-bold text-gray-800 mb-1 text-center break-all">{currentObj.id}</div>
+                            ) : null;
+                        })()}
+                        <div className="flex items-center justify-center w-full mt-2 mb-2">
                             <img
                                 src={overlayImageUrl}
                                 alt="Full size"
