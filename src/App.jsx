@@ -754,7 +754,12 @@ const App = () => {
                                                                             className="bg-gray-100 p-2 rounded-lg shadow flex justify-center items-center overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-200"
                                                                             onClick={() => handleImageClick(uri)}
                                                                         >
-                                                                            <span className="break-all text-xs text-blue-700 underline">{uri}</span>
+                                                                            <img
+                                                                                src={uri + "/preview"}
+                                                                                alt="Preview"
+                                                                                className="max-h-32 max-w-full object-contain rounded shadow cursor-pointer hover:scale-105 transition-transform duration-200"
+                                                                                onClick={e => { e.stopPropagation(); handleImageClick(uri); }}
+                                                                            />
                                                                         </div>
                                                                     ))}
                                                                 </div>
@@ -769,7 +774,12 @@ const App = () => {
                                                                         className="bg-gray-100 p-2 rounded-lg shadow flex justify-center items-center overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-200"
                                                                         onClick={() => handleImageClick(uri)}
                                                                     >
-                                                                        <span className="break-all text-xs text-blue-700 underline">{uri}</span>
+                                                                        <img
+                                                                            src={uri + "/preview"}
+                                                                            alt="Preview"
+                                                                            className="max-h-32 max-w-full object-contain rounded shadow cursor-pointer hover:scale-105 transition-transform duration-200"
+                                                                            onClick={e => { e.stopPropagation(); handleImageClick(uri); }}
+                                                                        />
                                                                     </div>
                                                                 ))}
                                                             </div>
@@ -823,7 +833,12 @@ const App = () => {
                                                         className="bg-gray-100 p-2 rounded-lg shadow flex justify-center items-center overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-200"
                                                         onClick={() => handleImageClick(obj.uri)}
                                                     >
-                                                        <span className="break-all text-xs text-blue-700 underline">{obj.uri}</span>
+                                                        <img
+                                                            src={obj.uri + "/preview"}
+                                                            alt="Preview"
+                                                            className="max-h-32 max-w-full object-contain rounded shadow cursor-pointer hover:scale-105 transition-transform duration-200"
+                                                            onClick={e => { e.stopPropagation(); handleImageClick(obj.uri); }}
+                                                        />
                                                     </div>
                                                 ))}
                                             </div>
@@ -855,7 +870,12 @@ const App = () => {
                         >
                             &times;
                         </button>
-                        <span className="break-all text-blue-700 underline block p-4">{overlayImageUrl}</span>
+                        <img
+                            src={overlayImageUrl}
+                            alt="Full size"
+                            className="max-h-[80vh] w-auto h-auto max-w-full rounded shadow-lg block mx-auto"
+                            style={{ objectFit: 'contain', display: 'block', margin: '0 auto' }}
+                        />
                     </div>
                 </div>
             )}
