@@ -9,18 +9,10 @@ import TimeSelector from './components/TimeSelector';
 import LocationSelector from './components/LocationSelector';
 import CaptionFilter from './components/CaptionFilter';
 import { executeSparqlQuery, fetchAllTags, fetchAllCountries, fetchDayRange, fetchAllCategories, fetchAllCities, fetchAllLocations } from './utils/sparql';
+import { FILTER_ORDER } from './config';
 
 // Configurable filter order
-const filterOrder = [
-    'tags',
-    'category',
-    'country',
-    'city',
-    'location',
-    'date',
-    'time',
-    'caption',
-];
+const filterOrder = FILTER_ORDER;
 
 // CollapsiblePanel component for left/right columns
 const CollapsiblePanel = ({ title, children, defaultOpen = false, className = "", forceCollapse }) => {
@@ -695,6 +687,10 @@ const App = () => {
         setSelectedYears([]);
         setSelectedMonths([]);
         setSelectedCategories([]);
+        setStartTime(minTime);
+        setEndTime(maxTime);
+        setIncludeStartTime(false);
+        setIncludeEndTime(false);
         setSelectedCaption('')
         setTriggerFetch(0); // Reset triggerFetch so 'no results' message vanishes
     };

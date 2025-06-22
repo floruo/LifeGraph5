@@ -71,7 +71,7 @@ const TimeSelector = ({ minTime, maxTime, startTime, endTime, setStartTime, setE
             <div className="grid grid-cols-4 gap-2 mt-2 items-center">
                 <button type="button" className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 text-xs w-full" onClick={() => { setStartTime('06:00'); setEndTime('12:00'); setIncludeStartTime(true); setIncludeEndTime(true); }}>Morning</button>
                 <button type="button" className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 text-xs w-full" onClick={() => { setStartTime('12:00'); setEndTime('18:00'); setIncludeStartTime(true); setIncludeEndTime(true); }}>Afternoon</button>
-                <button type="button" className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 text-xs w-full" onClick={() => { setStartTime('18:00'); setEndTime('00:00'); setIncludeStartTime(true); setIncludeEndTime(true); }}>Evening</button>
+                <button type="button" className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 text-xs w-full" onClick={() => { setStartTime('18:00'); setEndTime('23:59'); setIncludeStartTime(true); setIncludeEndTime(true); }}>Evening</button>
                 <button type="button" className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 text-xs w-full" onClick={() => { setStartTime('00:00'); setEndTime('06:00'); setIncludeStartTime(true); setIncludeEndTime(true); }}>Night</button>
             </div>
             <div className="flex justify-end mt-2">

@@ -1,9 +1,9 @@
 // Generic SPARQL utility functions for the app
 
-export const sparqlEndpointUrl = 'http://localhost:8080/query/sparql';
+import { SPARQL_ENDPOINT } from '../config';
 
 export const executeSparqlQuery = async (sparqlQuery) => {
-    const urlWithQuery = `${sparqlEndpointUrl}?query=${encodeURIComponent(sparqlQuery)}`;
+    const urlWithQuery = `${SPARQL_ENDPOINT}?query=${encodeURIComponent(sparqlQuery)}`;
     const response = await fetch(urlWithQuery, {
         method: 'GET',
         headers: {
