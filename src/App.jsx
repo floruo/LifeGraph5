@@ -6,7 +6,8 @@ import DateSelector from './components/DateSelector.jsx';
 import CategorySelector from './components/CategorySelector';
 import CitySelector from './components/CitySelector';
 import TimeSelector from './components/TimeSelector';
-import { executeSparqlQuery, fetchAllTags, fetchAllCountries, fetchDayRange, fetchAllCategories, fetchAllCities } from './utils/sparql';
+import LocationSelector from './components/LocationSelector';
+import { executeSparqlQuery, fetchAllTags, fetchAllCountries, fetchDayRange, fetchAllCategories, fetchAllCities, fetchAllLocations } from './utils/sparql';
 
 // Configurable filter order
 const filterOrder = [
@@ -14,6 +15,7 @@ const filterOrder = [
     'category',
     'country',
     'city',
+    'location',
     'date',
     'time',
 ];
@@ -66,6 +68,12 @@ const App = () => {
     const [loadingCategories, setLoadingCategories] = useState(true);
     const [selectedCategories, setSelectedCategories] = useState([]);
     const [forceFetchCategories, setForceFetchCategories] = useState(false);
+
+    // Location selector state
+    const [selectedLocation, setSelectedLocation] = useState('');
+    const [loadingLocations, setLoadingLocations] = useState(false);
+    const [allLocations, setAllLocations] = useState([]);
+    const [locationSearch, setLocationSearch] = useState('');
 
     // State for URI overlay
     const [overlayImageUrl, setOverlayImageUrl] = useState(null);
@@ -139,7 +147,7 @@ const App = () => {
     // Update the live SPARQL query whenever filters or groupByDay change
     useEffect(() => {
         setLiveSparqlQuery(getSparqlQuery());
-    }, [selectedTags, selectedCountry, selectedCity, includeStartDay, includeEndDay, startDay, endDay, selectedWeekdays, selectedYears, queryMode, selectedMonths, selectedCategories, groupByDay, includeStartTime, includeEndTime, startTime, endTime]);
+    }, [selectedTags, selectedCountry, selectedCity, selectedLocation, includeStartDay, includeEndDay, startDay, endDay, selectedWeekdays, selectedYears, queryMode, selectedMonths, selectedCategories, groupByDay, includeStartTime, includeEndTime, startTime, endTime]);
 
     // Fetch min/max day from SPARQL endpoint on mount or when forceFetchDayRange changes
     useEffect(() => {
@@ -245,6 +253,17 @@ const App = () => {
             cityClauses.push(`  {\n    ?s lsc:city \"${selectedCity.replace(/\"/g, '\\"')}\" .\n  }`);
         }
         return { cityClauses, cityPrefixes };
+    };
+
+    // Location filter block
+    const getLocationBlock = () => {
+        let locationClauses = [];
+        let locationPrefixes = [];
+        if (selectedLocation) {
+            pushUnique(locationPrefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
+            locationClauses.push(`  {\n    ?s lsc:location_name \"${selectedLocation.replace(/\"/g, '\\"')}\" .\n  }`);
+        }
+        return { locationClauses, locationPrefixes };
     };
 
     // Date, Year, Month, Weekday block
@@ -447,6 +466,22 @@ const App = () => {
                         />
                     </CollapsiblePanel>
                 );
+            case 'location':
+                return (
+                    <CollapsiblePanel title="Location" forceCollapse={collapseAllFilters}>
+                        <LocationSelector
+                            selectedLocation={selectedLocation}
+                            setSelectedLocation={setSelectedLocation}
+                            loadingLocations={loadingLocations}
+                            setLoadingLocations={setLoadingLocations}
+                            allLocations={allLocations}
+                            setAllLocations={setAllLocations}
+                            locationSearch={locationSearch}
+                            setLocationSearch={setLocationSearch}
+                            fetchAllLocations={(force) => fetchAllLocations(setAllLocations, setLoadingLocations, force)}
+                        />
+                    </CollapsiblePanel>
+                );
             default:
                 return null;
         }
@@ -465,7 +500,8 @@ const App = () => {
             selectedMonths.length === 0 &&
             selectedCategories.length === 0 &&
             !includeStartTime &&
-            !includeEndTime
+            !includeEndTime &&
+            !selectedLocation
         ) {
             return '';
         }
@@ -484,6 +520,10 @@ const App = () => {
                 const { cityClauses, cityPrefixes } = getCityBlock();
                 whereClauses.push(...cityClauses);
                 cityPrefixes.forEach(p => pushUnique(prefixes, p));
+            } else if (type === 'location') {
+                const { locationClauses, locationPrefixes } = getLocationBlock();
+                whereClauses.push(...locationClauses);
+                locationPrefixes.forEach(p => pushUnique(prefixes, p));
             } else if (type === 'date') {
                 const { dateClauses, datePrefixes } = getDateBlock();
                 whereClauses.push(...dateClauses);
@@ -593,6 +633,11 @@ const App = () => {
         if (forceFetchCategories) setForceFetchCategories(false);
     }, [forceFetchCategories]);
 
+    // useEffect to fetch all locations once on component mount
+    useEffect(() => {
+        fetchAllLocations(setAllLocations, setLoadingLocations);
+    }, []);
+
     // Handler for URI overlay
     const handleImageClick = (originalUri) => {
         setOverlayImageUrl(originalUri);
@@ -624,6 +669,7 @@ const App = () => {
         setCountrySearch('');
         setCitySearch('');
         setSelectedCity('');
+        setSelectedLocation('');
         setStartDay(minDay);
         setEndDay(maxDay);
         setIncludeStartDay(false);

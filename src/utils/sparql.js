@@ -23,6 +23,7 @@ let countriesFetchInProgress = false;
 let categoriesFetchInProgress = false;
 let citiesFetchInProgress = false;
 let dayRangeFetchInProgress = false;
+let locationsFetchInProgress = false;
 
 export const fetchAllTags = async (setAllTags, setLoadingTags, force = false) => {
     if (tagsFetchInProgress) return;
@@ -224,6 +225,53 @@ export const fetchAllCities = async (setAllCities, setLoadingCities, force = fal
     } finally {
         setLoadingCities(false);
         citiesFetchInProgress = false;
+    }
+};
+
+export const fetchAllLocations = async (setAllLocations, setLoadingLocations, force = false) => {
+    if (locationsFetchInProgress) return;
+    locationsFetchInProgress = true;
+    const cacheKey = 'allLscLocations';
+    setLoadingLocations(true);
+    try {
+        if (force) {
+            try {
+                localStorage.removeItem(cacheKey);
+            } catch (e) {
+                console.error('Could not remove locations from localStorage:', e);
+            }
+        } else {
+            const cachedLocations = localStorage.getItem(cacheKey);
+            if (cachedLocations) {
+                const locations = JSON.parse(cachedLocations).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+                setAllLocations(locations);
+                setLoadingLocations(false);
+                return;
+            }
+        }
+        const locationsQuery = `
+            SELECT DISTINCT ?location_name
+            WHERE {
+                ?s <http://lsc.dcu.ie/schema#location_name> ?location_name .
+            }
+        `;
+        const bindings = await executeSparqlQuery(locationsQuery);
+        const locations = bindings
+            .map(binding => binding.location_name?.value)
+            .filter(Boolean)
+            .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+        setAllLocations(locations);
+        try {
+            localStorage.setItem(cacheKey, JSON.stringify(locations));
+        } catch (e) {
+            console.error('Could not save locations to localStorage:', e);
+        }
+    } catch (e) {
+        setAllLocations([]);
+        console.error('Error fetching locations:', e);
+    } finally {
+        setLoadingLocations(false);
+        locationsFetchInProgress = false;
     }
 };
 
