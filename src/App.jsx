@@ -7,6 +7,7 @@ import CategorySelector from './components/CategorySelector';
 import CitySelector from './components/CitySelector';
 import TimeSelector from './components/TimeSelector';
 import LocationSelector from './components/LocationSelector';
+import CaptionFilter from './components/CaptionFilter';
 import { executeSparqlQuery, fetchAllTags, fetchAllCountries, fetchDayRange, fetchAllCategories, fetchAllCities, fetchAllLocations } from './utils/sparql';
 
 // Configurable filter order
@@ -18,6 +19,7 @@ const filterOrder = [
     'location',
     'date',
     'time',
+    'caption',
 ];
 
 // CollapsiblePanel component for left/right columns
@@ -84,6 +86,9 @@ const App = () => {
     // State for tag search input in the select box
     const [tagSearch, setTagSearch] = useState('');
 
+    // State for caption filter
+    const [selectedCaption, setSelectedCaption] = useState('');
+
     // State for union/intersection mode
     const [queryMode, setQueryMode] = useState('intersection'); // 'intersection' or 'union'
 
@@ -147,7 +152,7 @@ const App = () => {
     // Update the live SPARQL query whenever filters or groupByDay change
     useEffect(() => {
         setLiveSparqlQuery(getSparqlQuery());
-    }, [selectedTags, selectedCountry, selectedCity, selectedLocation, includeStartDay, includeEndDay, startDay, endDay, selectedWeekdays, selectedYears, queryMode, selectedMonths, selectedCategories, groupByDay, includeStartTime, includeEndTime, startTime, endTime]);
+    }, [selectedTags, selectedCountry, selectedCity, selectedLocation, includeStartDay, includeEndDay, startDay, endDay, selectedWeekdays, selectedYears, queryMode, selectedMonths, selectedCategories, groupByDay, includeStartTime, includeEndTime, startTime, endTime, selectedCaption]);
 
     // Fetch min/max day from SPARQL endpoint on mount or when forceFetchDayRange changes
     useEffect(() => {
@@ -357,6 +362,19 @@ const App = () => {
         return { categoryClauses, categoryPrefixes };
     };
 
+    // Caption filter block
+    const getCaptionBlock = () => {
+        let captionClauses = [];
+        let captionPrefixes = [];
+        if (selectedCaption) {
+            pushUnique(captionPrefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
+            // The triple: ?s lsc:caption ?caption .
+            // Filter: case-insensitive substring match
+            captionClauses.push(`  {\n    ?s lsc:caption ?caption .\n    FILTER(CONTAINS(LCASE(STR(?caption)), LCASE(\"${selectedCaption.replace(/"/g, '\\"')}\")))\n  }`);
+        }
+        return { captionClauses, captionPrefixes };
+    };
+
     // Helper to render filter panels by type
     const renderFilterPanel = (type) => {
         switch (type) {
@@ -482,6 +500,16 @@ const App = () => {
                         />
                     </CollapsiblePanel>
                 );
+            case 'caption':
+                return (
+                    <CollapsiblePanel title="Caption" forceCollapse={collapseAllFilters}>
+                        <CaptionFilter
+                            selectedCaption={selectedCaption}
+                            setSelectedCaption={setSelectedCaption}
+                            loading={loading}
+                        />
+                    </CollapsiblePanel>
+                );
             default:
                 return null;
         }
@@ -501,7 +529,8 @@ const App = () => {
             selectedCategories.length === 0 &&
             !includeStartTime &&
             !includeEndTime &&
-            !selectedLocation
+            !selectedLocation &&
+            !selectedCaption
         ) {
             return '';
         }
@@ -533,9 +562,13 @@ const App = () => {
                 whereClauses.push(...timeClauses);
                 timePrefixes.forEach(p => pushUnique(prefixes, p));
             } else if (type === 'category') {
-                const { categoryClauses, categoryPrefixes } = getCategoryBlock();
+                const {categoryClauses, categoryPrefixes} = getCategoryBlock();
                 whereClauses.push(...categoryClauses);
                 categoryPrefixes.forEach(p => pushUnique(prefixes, p));
+            } else if (type === 'caption') {
+                const { captionClauses, captionPrefixes } = getCaptionBlock();
+                whereClauses.push(...captionClauses);
+                captionPrefixes.forEach(p => pushUnique(prefixes, p));
             }
         });
         // Only add the day triple if groupByDay is true and it is not already present from the date block
@@ -563,28 +596,8 @@ const App = () => {
 
     // useEffect to clear filters on initial mount or reload
     useEffect(() => {
-        setSelectedTags([]);
-        setSelectedCountry('');
-        setTagSearch('');
-        setCountrySearch('');
-        setCitySearch('');
-        setStartDay(minDay);
-        setEndDay(maxDay);
-        setIncludeStartDay(false);
-        setIncludeEndDay(false);
-        setSelectedWeekdays([]);
-        setWeekdayRange([null, null]);
-        setImageUris([]);
-        setError(null);
-        setQueryTime(null);
-        setSelectedYears([]);
-        setSelectedMonths([]);
-        setSelectedCategories([]);
-        setSelectedCity('');
-        setGroupByDay(true);
-        didMount.current = true;
-        // Do not trigger fetch on mount or reload
-    }, [minDay, maxDay]);
+        handleClearFilters()
+    }, []);
 
     // useEffect to trigger the fetch function whenever 'triggerFetch' state changes
     useEffect(() => {
@@ -681,7 +694,8 @@ const App = () => {
         setQueryTime(null);
         setSelectedYears([]);
         setSelectedMonths([]);
-        setSelectedCategories([]); // Clear categories as well
+        setSelectedCategories([]);
+        setSelectedCaption('')
         setTriggerFetch(0); // Reset triggerFetch so 'no results' message vanishes
     };
 
