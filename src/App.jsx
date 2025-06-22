@@ -139,13 +139,19 @@ const App = () => {
         setGroupByDay(e.target.checked);
     };
 
+    // State for KNN filter
+    const [knnActive, setKnnActive] = useState(false);
+    const [knnValue, setKnnValue] = useState(5); // Default k=5
+    const [knnUri, setKnnUri] = useState(null);
+    const [knnReplaceMode, setKnnReplaceMode] = useState(false); // New state for replace mode
+
     // Store the latest SPARQL query for live display
     const [liveSparqlQuery, setLiveSparqlQuery] = useState('');
 
     // Update the live SPARQL query whenever filters or groupByDay change
     useEffect(() => {
         setLiveSparqlQuery(getSparqlQuery());
-    }, [selectedTags, selectedCountry, selectedCity, selectedLocation, includeStartDay, includeEndDay, startDay, endDay, selectedWeekdays, selectedYears, queryMode, selectedMonths, selectedCategories, groupByDay, includeStartTime, includeEndTime, startTime, endTime, selectedCaption, selectedOcr]);
+    }, [selectedTags, selectedCountry, selectedCity, selectedLocation, includeStartDay, includeEndDay, startDay, endDay, selectedWeekdays, selectedYears, queryMode, selectedMonths, selectedCategories, groupByDay, includeStartTime, includeEndTime, startTime, endTime, selectedCaption, selectedOcr, knnActive]);
 
     // Fetch min/max day from SPARQL endpoint on mount or when forceFetchDayRange changes
     useEffect(() => {
@@ -379,6 +385,14 @@ const App = () => {
         return { ocrClauses, ocrPrefixes };
     };
 
+    // KNN filter block
+    const getKnnBlock = () => {
+        if (knnActive && knnUri && knnValue > 0) {
+            return `  <${knnUri}> implicit:clip${knnValue}nn ?s .`;
+        }
+        return '';
+    };
+
     // Helper to render filter panels by type
     const renderFilterPanel = (type) => {
         switch (type) {
@@ -545,12 +559,34 @@ const App = () => {
             !includeEndTime &&
             !selectedLocation &&
             !selectedCaption &&
-            !selectedOcr
+            !selectedOcr &&
+            !knnActive
         ) {
             return '';
         }
         let whereClauses = [];
         let prefixes = [];
+        // Insert KNN block at the top of WHERE if active
+        const knnBlock = getKnnBlock();
+        if (knnActive && knnReplaceMode && knnBlock) {
+            // Only use the KNN block, ignore other filters
+            pushUnique(prefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
+            pushUnique(prefixes, 'PREFIX implicit: <http://megras.org/implicit/>');
+            return [
+                ...prefixes,
+                '',
+                'SELECT DISTINCT ?s ?id' + (groupByDay ? ' ?day' : ''),
+                'WHERE {',
+                '  ?s lsc:id ?id .',
+                groupByDay ? '  ?s lsc:day ?day .' : '',
+                knnBlock,
+                '}'
+            ].filter(Boolean).join('\n');
+        }
+        if (knnBlock) {
+            whereClauses.push(knnBlock);
+            pushUnique(prefixes, 'PREFIX implicit: <http://megras.org/implicit/>');
+        }
         filterOrder.forEach(type => {
             if (type === 'tags') {
                 const { tagClauses, tagPrefixes } = getTagBlock();
@@ -718,6 +754,7 @@ const App = () => {
         setIncludeEndTime(false);
         setSelectedCaption('');
         setSelectedOcr('');
+        setKnnActive(false);
         setTriggerFetch(0); // Reset triggerFetch so 'no results' message vanishes
     };
 
@@ -1052,26 +1089,64 @@ const App = () => {
                                 style={{ objectFit: 'contain', display: 'block', margin: '0 auto' }}
                             />
                         </div>
-                        {/* Navigation buttons in a separate white area below the image */}
-                        <div>
-                            <button
-                                onClick={showPrevImage}
-                                disabled={currentIndex <= 0}
-                                className={`mr-2 px-3 py-2 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 transition disabled:opacity-50 disabled:cursor-not-allowed`}
-                                aria-label="Previous image"
-                                style={{ minWidth: 40 }}
-                            >
-                                &#8592;
-                            </button>
-                            <button
-                                onClick={showNextImage}
-                                disabled={currentIndex >= imageUris.length - 1}
-                                className={`px-3 py-2 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 transition disabled:opacity-50 disabled:cursor-not-allowed`}
-                                aria-label="Next image"
-                                style={{ minWidth: 40 }}
-                            >
-                                &#8594;
-                            </button>
+                        {/* Controls below the image, never overlapping */}
+                        <div className="w-full flex flex-row items-center justify-between mt-2">
+                            {/* KNN filter controls - bottom left */}
+                            <div style={{ width: 160 }} className="flex flex-col items-stretch gap-2">
+                                <button
+                                    className={`px-3 py-1 rounded bg-green-600 text-white text-xs font-semibold shadow hover:bg-green-700 transition w-full`}
+                                    style={{ minWidth: 0 }}
+                                    onClick={() => {
+                                        setKnnActive(true);
+                                        setKnnUri(overlayImageUrl);
+                                        handleCloseOverlay();
+                                    }}
+                                    title="Add KNN block to query"
+                                >
+                                    Add kNN Filter
+                                </button>
+                                <div className="flex flex-row items-center gap-2 mt-1 w-full">
+                                    <input
+                                        type="number"
+                                        min={1}
+                                        value={knnValue}
+                                        onChange={e => setKnnValue(Math.max(1, parseInt(e.target.value) || 1))}
+                                        className="w-16 px-2 py-1 border rounded text-sm"
+                                        title="k"
+                                    />
+                                    <label className="flex items-center text-xs ml-2">
+                                        <input
+                                            type="checkbox"
+                                            checked={knnReplaceMode}
+                                            onChange={e => setKnnReplaceMode(e.target.checked)}
+                                            className="mr-1"
+                                        />
+                                        Replace
+                                    </label>
+                                </div>
+                            </div>
+                            {/* Navigation buttons - centered */}
+                            <div className="flex items-center justify-center flex-1">
+                                <button
+                                    onClick={showPrevImage}
+                                    disabled={currentIndex <= 0}
+                                    className={`mr-2 px-3 py-2 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 transition disabled:opacity-50 disabled:cursor-not-allowed`}
+                                    aria-label="Previous image"
+                                    style={{ minWidth: 40 }}
+                                >
+                                    &#8592;
+                                </button>
+                                <button
+                                    onClick={showNextImage}
+                                    disabled={currentIndex >= imageUris.length - 1}
+                                    className={`px-3 py-2 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 transition disabled:opacity-50 disabled:cursor-not-allowed`}
+                                    aria-label="Next image"
+                                    style={{ minWidth: 40 }}
+                                >
+                                    &#8594;
+                                </button>
+                            </div>
+                            <div className="w-32" /> {/* Spacer to balance layout */}
                         </div>
                     </div>
                 </div>
