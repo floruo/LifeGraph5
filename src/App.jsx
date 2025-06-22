@@ -612,6 +612,26 @@ const App = () => {
         return groups;
     }
 
+    // Find the index of the current image in the list
+    const currentIndex = imageUris.findIndex(obj => obj.uri === overlayImageUrl);
+    const showPrevImage = () => {
+        if (currentIndex > 0) setOverlayImageUrl(imageUris[currentIndex - 1].uri);
+    };
+    const showNextImage = () => {
+        if (currentIndex < imageUris.length - 1) setOverlayImageUrl(imageUris[currentIndex + 1].uri);
+    };
+    // Keyboard navigation for modal
+    useEffect(() => {
+        if (!overlayImageUrl) return;
+        const handleKeyDown = (e) => {
+            if (e.key === 'ArrowLeft') showPrevImage();
+            if (e.key === 'ArrowRight') showNextImage();
+            if (e.key === 'Escape') handleCloseOverlay();
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [overlayImageUrl, currentIndex, imageUris]);
+
     return (
         <div className="min-h-screen bg-gray-100 flex flex-col items-center p-4 font-inter">
             <div className="bg-white p-8 rounded-lg shadow-xl w-full h-full">
@@ -862,7 +882,7 @@ const App = () => {
                     className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
                     onClick={handleCloseOverlay}
                 >
-                    <div className="relative bg-white p-4 rounded-lg shadow-2xl max-w-5xl max-h-full overflow-hidden" onClick={e => e.stopPropagation()}>
+                    <div className="relative bg-white p-4 rounded-lg shadow-2xl max-w-5xl max-h-full overflow-hidden flex flex-col items-center" onClick={e => e.stopPropagation()}>
                         <button
                             onClick={handleCloseOverlay}
                             className="absolute top-2 right-2 bg-red-600 text-white rounded-full h-8 w-8 flex items-center justify-center text-lg font-bold hover:bg-red-700 transition"
@@ -870,12 +890,35 @@ const App = () => {
                         >
                             &times;
                         </button>
-                        <img
-                            src={overlayImageUrl}
-                            alt="Full size"
-                            className="max-h-[80vh] w-auto h-auto max-w-full rounded shadow-lg block mx-auto"
-                            style={{ objectFit: 'contain', display: 'block', margin: '0 auto' }}
-                        />
+                        <div className="flex items-center justify-center w-full mt-8 mb-2">
+                            <img
+                                src={overlayImageUrl}
+                                alt="Full size"
+                                className="max-h-[80vh] w-auto h-auto max-w-full rounded shadow-lg block mx-auto"
+                                style={{ objectFit: 'contain', display: 'block', margin: '0 auto' }}
+                            />
+                        </div>
+                        {/* Navigation buttons in a separate white area below the image */}
+                        <div>
+                            <button
+                                onClick={showPrevImage}
+                                disabled={currentIndex <= 0}
+                                className={`mr-2 px-3 py-2 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 transition disabled:opacity-50 disabled:cursor-not-allowed`}
+                                aria-label="Previous image"
+                                style={{ minWidth: 40 }}
+                            >
+                                &#8592;
+                            </button>
+                            <button
+                                onClick={showNextImage}
+                                disabled={currentIndex >= imageUris.length - 1}
+                                className={`px-3 py-2 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 transition disabled:opacity-50 disabled:cursor-not-allowed`}
+                                aria-label="Next image"
+                                style={{ minWidth: 40 }}
+                            >
+                                &#8594;
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
