@@ -16,7 +16,7 @@ const CaptionFilter = ({ selectedCaption, setSelectedCaption, loading }) => (
         <button
          className="px-2 py-1 bg-red-100 text-red-700 rounded shadow hover:bg-red-200 transition text-xs w-fit"
          onClick={() => setSelectedCaption('')}
-         disabled={loading || !selectedCaption}
+         //disabled={loading || !selectedCaption}
          type="button"
         >
         Clear Caption

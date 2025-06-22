@@ -8,6 +8,7 @@ import CitySelector from './components/CitySelector';
 import TimeSelector from './components/TimeSelector';
 import LocationSelector from './components/LocationSelector';
 import CaptionFilter from './components/CaptionFilter';
+import OcrFilter from './components/OcrFilter';
 import { executeSparqlQuery, fetchAllTags, fetchAllCountries, fetchDayRange, fetchAllCategories, fetchAllCities, fetchAllLocations } from './utils/sparql';
 import { FILTER_ORDER } from './config';
 
@@ -81,6 +82,9 @@ const App = () => {
     // State for caption filter
     const [selectedCaption, setSelectedCaption] = useState('');
 
+    // State for OCR filter
+    const [selectedOcr, setSelectedOcr] = useState('');
+
     // State for union/intersection mode
     const [queryMode, setQueryMode] = useState('intersection'); // 'intersection' or 'union'
 
@@ -138,13 +142,10 @@ const App = () => {
     // Store the latest SPARQL query for live display
     const [liveSparqlQuery, setLiveSparqlQuery] = useState('');
 
-    // Track if component has mounted to avoid fetching on first render
-    const hasMounted = React.useRef(false);
-
     // Update the live SPARQL query whenever filters or groupByDay change
     useEffect(() => {
         setLiveSparqlQuery(getSparqlQuery());
-    }, [selectedTags, selectedCountry, selectedCity, selectedLocation, includeStartDay, includeEndDay, startDay, endDay, selectedWeekdays, selectedYears, queryMode, selectedMonths, selectedCategories, groupByDay, includeStartTime, includeEndTime, startTime, endTime, selectedCaption]);
+    }, [selectedTags, selectedCountry, selectedCity, selectedLocation, includeStartDay, includeEndDay, startDay, endDay, selectedWeekdays, selectedYears, queryMode, selectedMonths, selectedCategories, groupByDay, includeStartTime, includeEndTime, startTime, endTime, selectedCaption, selectedOcr]);
 
     // Fetch min/max day from SPARQL endpoint on mount or when forceFetchDayRange changes
     useEffect(() => {
@@ -367,6 +368,17 @@ const App = () => {
         return { captionClauses, captionPrefixes };
     };
 
+    // OCR filter block
+    const getOcrBlock = () => {
+        let ocrClauses = [];
+        let ocrPrefixes = [];
+        if (selectedOcr) {
+            pushUnique(ocrPrefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
+            ocrClauses.push(`  {\n    ?s lsc:ocr ?ocr .\n    FILTER(CONTAINS(LCASE(STR(?ocr)), LCASE(\"${selectedOcr.replace(/\"/g, '\\\"')}\")))\n  }`);
+        }
+        return { ocrClauses, ocrPrefixes };
+    };
+
     // Helper to render filter panels by type
     const renderFilterPanel = (type) => {
         switch (type) {
@@ -502,6 +514,16 @@ const App = () => {
                         />
                     </CollapsiblePanel>
                 );
+            case 'ocr':
+                return (
+                    <CollapsiblePanel title="OCR" forceCollapse={collapseAllFilters}>
+                        <OcrFilter
+                            selectedOcr={selectedOcr}
+                            setSelectedOcr={setSelectedOcr}
+                            loading={loading}
+                        />
+                    </CollapsiblePanel>
+                );
             default:
                 return null;
         }
@@ -522,7 +544,8 @@ const App = () => {
             !includeStartTime &&
             !includeEndTime &&
             !selectedLocation &&
-            !selectedCaption
+            !selectedCaption &&
+            !selectedOcr
         ) {
             return '';
         }
@@ -561,6 +584,10 @@ const App = () => {
                 const { captionClauses, captionPrefixes } = getCaptionBlock();
                 whereClauses.push(...captionClauses);
                 captionPrefixes.forEach(p => pushUnique(prefixes, p));
+            } else if (type === 'ocr') {
+                const { ocrClauses, ocrPrefixes } = getOcrBlock();
+                whereClauses.push(...ocrClauses);
+                ocrPrefixes.forEach(p => pushUnique(prefixes, p));
             }
         });
         // Only add the day triple if groupByDay is true and it is not already present from the date block
@@ -593,9 +620,7 @@ const App = () => {
 
     // useEffect to trigger the fetch function whenever 'triggerFetch' state changes
     useEffect(() => {
-        if (didMount.current) {
-            fetchImageUris();
-        }
+        fetchImageUris();
         // eslint-disable-next-line
     }, [triggerFetch]);
 
@@ -691,7 +716,8 @@ const App = () => {
         setEndTime(maxTime);
         setIncludeStartTime(false);
         setIncludeEndTime(false);
-        setSelectedCaption('')
+        setSelectedCaption('');
+        setSelectedOcr('');
         setTriggerFetch(0); // Reset triggerFetch so 'no results' message vanishes
     };
 

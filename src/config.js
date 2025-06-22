@@ -13,5 +13,6 @@ export const FILTER_ORDER = [
     'date',
     'time',
     'caption',
+    'ocr',
 ];
 

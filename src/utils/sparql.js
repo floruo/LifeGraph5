@@ -150,13 +150,13 @@ export const fetchAllCategories = async (setAllCategories, setLoadingCategories,
                 return;
             }
         }
-        const query = `
+        const categoriesQuery = `
             SELECT DISTINCT ?category
             WHERE {
                 ?s <http://lsc.dcu.ie/schema#category> ?category .
             }
         `;
-        const bindings = await executeSparqlQuery(query);
+        const bindings = await executeSparqlQuery(categoriesQuery);
         const categories = bindings
             .map(binding => binding.category?.value)
             .filter(Boolean)
