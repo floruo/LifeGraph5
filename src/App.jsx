@@ -321,6 +321,8 @@ const App = () => {
                             forceFetchTags={forceFetchTags}
                             setForceFetchTags={setForceFetchTags}
                             fetchAllTags={(force = false) => setForceFetchTags(force)}
+                            queryMode={queryMode}
+                            setQueryMode={setQueryMode}
                         />
                     </CollapsiblePanel>
                 );
