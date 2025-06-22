@@ -41,13 +41,13 @@ const DateSelector = ({ minDate, maxDate, startDate, endDate, setStartDate, setE
     // Remove automated query trigger on change
     const handleStartChange = (e) => {
         const val = e.target.value;
-        if (val <= endDate && val >= minDate && val <= maxDate) {
+        if (val >= minDate && val <= maxDate) {
             setStartDate(val);
         }
     };
     const handleEndChange = (e) => {
         const val = e.target.value;
-        if (val >= startDate && val >= minDate && val <= maxDate) {
+        if (val >= minDate && val <= maxDate) {
             setEndDate(val);
         }
     };

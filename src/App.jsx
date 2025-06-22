@@ -512,7 +512,7 @@ const App = () => {
             '',
             selectClause,
             'WHERE {',
-            '   ?s lsc:id ?id .',
+            '  ?s lsc:id ?id .',
             whereClauses.join('\n'),
             '}'
         ].join('\n');
