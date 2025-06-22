@@ -5,6 +5,7 @@ import CountrySelector from './components/CountrySelector';
 import DateSelector from './components/DateSelector.jsx';
 import CategorySelector from './components/CategorySelector';
 import CitySelector from './components/CitySelector';
+import TimeSelector from './components/TimeSelector';
 import { executeSparqlQuery, fetchAllTags, fetchAllCountries, fetchDayRange, fetchAllCategories, fetchAllCities } from './utils/sparql';
 
 // Configurable filter order
@@ -14,6 +15,7 @@ const filterOrder = [
     'country',
     'city',
     'date',
+    'time',
 ];
 
 // CollapsiblePanel component for left/right columns
@@ -115,6 +117,14 @@ const App = () => {
     // State for grouping by day (default true)
     const [groupByDay, setGroupByDay] = useState(true);
 
+    // Time selector state
+    const [minTime, setMinTime] = useState('00:00');
+    const [maxTime, setMaxTime] = useState('23:59');
+    const [startTime, setStartTime] = useState('00:00');
+    const [endTime, setEndTime] = useState('23:59');
+    const [includeStartTime, setIncludeStartTime] = useState(false);
+    const [includeEndTime, setIncludeEndTime] = useState(false);
+
     // Handler for toggling groupByDay
     const handleGroupByDayChange = (e) => {
         setGroupByDay(e.target.checked);
@@ -129,7 +139,7 @@ const App = () => {
     // Update the live SPARQL query whenever filters or groupByDay change
     useEffect(() => {
         setLiveSparqlQuery(getSparqlQuery());
-    }, [selectedTags, selectedCountry, selectedCity, includeStartDay, includeEndDay, startDay, endDay, selectedWeekdays, selectedYears, queryMode, selectedMonths, selectedCategories, groupByDay]);
+    }, [selectedTags, selectedCountry, selectedCity, includeStartDay, includeEndDay, startDay, endDay, selectedWeekdays, selectedYears, queryMode, selectedMonths, selectedCategories, groupByDay, includeStartTime, includeEndTime, startTime, endTime]);
 
     // Fetch min/max day from SPARQL endpoint on mount or when forceFetchDayRange changes
     useEffect(() => {
@@ -150,6 +160,7 @@ const App = () => {
             setQueryMode('intersection');
         }
     }, [selectedTags, queryMode]);
+
 
     // Function to fetch data from the SPARQL endpoint based on the constructed query
     const fetchImageUris = async () => {
@@ -291,6 +302,27 @@ const App = () => {
         return { dateClauses, datePrefixes };
     };
 
+    // Time filter block
+    const getTimeBlock = () => {
+        let timeClauses = [];
+        let timePrefixes = [];
+        if (includeStartTime || includeEndTime) {
+            pushUnique(timePrefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
+            let filter = [];
+            // Extract time part from datetime string (format: 2019-07-09 07:47:08^^String)
+            // BIND(SUBSTR(STR(?datetime), 12, 8) AS ?time)
+            if (includeStartTime && includeEndTime) {
+                filter.push(`?time >= \"${startTime.length === 5 ? startTime + ':00' : startTime}\" && ?time <= \"${endTime.length === 5 ? endTime + ':00' : endTime}\"`);
+            } else if (includeStartTime) {
+                filter.push(`?time >= \"${startTime.length === 5 ? startTime + ':00' : startTime}\"`);
+            } else if (includeEndTime) {
+                filter.push(`?time <= \"${endTime.length === 5 ? endTime + ':00' : endTime}\"`);
+            }
+            timeClauses.push(`  {\n    ?s lsc:local_time ?datetime .\n    BIND(SUBSTR(STR(?datetime), 12, 8) AS ?time)\n    FILTER (${filter.join(' && ')})\n  }`);
+        }
+        return { timeClauses, timePrefixes };
+    };
+
     // Category filter block
     const getCategoryBlock = () => {
         let categoryClauses = [];
@@ -386,6 +418,23 @@ const App = () => {
                         />
                     </CollapsiblePanel>
                 );
+            case 'time':
+                return (
+                    <CollapsiblePanel title="Time" forceCollapse={collapseAllFilters}>
+                        <TimeSelector
+                            minTime={minTime}
+                            maxTime={maxTime}
+                            startTime={startTime}
+                            endTime={endTime}
+                            setStartTime={setStartTime}
+                            setEndTime={setEndTime}
+                            includeStartTime={includeStartTime}
+                            setIncludeStartTime={setIncludeStartTime}
+                            includeEndTime={includeEndTime}
+                            setIncludeEndTime={setIncludeEndTime}
+                        />
+                    </CollapsiblePanel>
+                );
             case 'category':
                 return (
                     <CollapsiblePanel title="Category" forceCollapse={collapseAllFilters}>
@@ -414,7 +463,9 @@ const App = () => {
             selectedWeekdays.length === 0 &&
             selectedYears.length === 0 &&
             selectedMonths.length === 0 &&
-            selectedCategories.length === 0
+            selectedCategories.length === 0 &&
+            !includeStartTime &&
+            !includeEndTime
         ) {
             return '';
         }
@@ -437,6 +488,10 @@ const App = () => {
                 const { dateClauses, datePrefixes } = getDateBlock();
                 whereClauses.push(...dateClauses);
                 datePrefixes.forEach(p => pushUnique(prefixes, p));
+            } else if (type === 'time') {
+                const { timeClauses, timePrefixes } = getTimeBlock();
+                whereClauses.push(...timeClauses);
+                timePrefixes.forEach(p => pushUnique(prefixes, p));
             } else if (type === 'category') {
                 const { categoryClauses, categoryPrefixes } = getCategoryBlock();
                 whereClauses.push(...categoryClauses);
