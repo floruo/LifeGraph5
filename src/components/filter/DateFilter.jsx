@@ -10,7 +10,7 @@ const weekdays = [
     "Sunday",
 ];
 
-const DateSelector = ({ minDate, maxDate, startDate, endDate, setStartDate, setEndDate, includeStartDay, setIncludeStartDay, includeEndDay, setIncludeEndDay, onRefreshDayRange, onDayChange, selectedWeekdays, setSelectedWeekdays, weekdayRange, setWeekdayRange, selectedYears, setSelectedYears, selectedMonths, setSelectedMonths, loadingDayRange }) => {
+const DateFilter = ({ minDate, maxDate, startDate, endDate, setStartDate, setEndDate, includeStartDay, setIncludeStartDay, includeEndDay, setIncludeEndDay, onRefreshDayRange, onDayChange, selectedWeekdays, setSelectedWeekdays, weekdayRange, setWeekdayRange, selectedYears, setSelectedYears, selectedMonths, setSelectedMonths, loadingDayRange }) => {
     // Helper to format date for input[type="range"]
     const toInputValue = (date) => date.split('-').join('');
     const fromInputValue = (val) => {
@@ -331,4 +331,4 @@ const DateSelector = ({ minDate, maxDate, startDate, endDate, setStartDate, setE
     );
 };
 
-export default DateSelector;
+export default DateFilter;

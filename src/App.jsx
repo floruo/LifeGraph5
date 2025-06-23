@@ -1,16 +1,18 @@
 // App.jsx
 import React, { useState, useEffect } from 'react';
-import TagSelector from './components/TagSelector';
-import CountrySelector from './components/CountrySelector';
-import DateSelector from './components/DateSelector.jsx';
-import CategorySelector from './components/CategorySelector';
-import CitySelector from './components/CitySelector';
-import TimeSelector from './components/TimeSelector';
-import LocationSelector from './components/LocationSelector';
-import CaptionFilter from './components/CaptionFilter';
-import OcrFilter from './components/OcrFilter';
-import { executeSparqlQuery, fetchAllTags, fetchAllCountries, fetchDayRange, fetchAllCategories, fetchAllCities, fetchAllLocations } from './utils/sparql';
+
 import { FILTER_ORDER } from './config';
+import { executeSparqlQuery, fetchAllTags, fetchAllCountries, fetchDayRange, fetchAllCategories, fetchAllCities, fetchAllLocations } from './utils/sparql';
+
+import TagSelector from './components/selector/TagSelector.jsx';
+import CountrySelector from './components/selector/CountrySelector.jsx';
+import DateFilter from './components/filter/DateFilter.jsx';
+import CategorySelector from './components/selector/CategorySelector.jsx';
+import CitySelector from './components/selector/CitySelector.jsx';
+import TimeFilter from './components/filter/TimeFilter.jsx';
+import LocationSelector from './components/selector/LocationSelector.jsx';
+import CaptionFilter from './components/filter/CaptionFilter.jsx';
+import OcrFilter from './components/filter/OcrFilter.jsx';
 
 // Configurable filter order
 const filterOrder = FILTER_ORDER;
@@ -38,11 +40,11 @@ const CollapsiblePanel = ({ title, children, defaultOpen = false, className = ""
 const App = () => {
     // State to store URIs
     const [imageUris, setImageUris] = useState([]);
-    const [loading, setLoading] = useState(false);         // State to manage loading status (initially false)
-    const [error, setError] = useState(null);             // State to store any errors
-    const [triggerFetch, setTriggerFetch] = useState(0);  // State to trigger fetch manually
-    const [allTags, setAllTags] = useState([]);           // State to store all available tags for autocomplete
-    const [loadingTags, setLoadingTags] = useState(true); // State for tag loading
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+    const [triggerFetch, setTriggerFetch] = useState(0);
+    const [allTags, setAllTags] = useState([]);
+    const [loadingTags, setLoadingTags] = useState(true);
 
     // Country selector state
     const [allCountries, setAllCountries] = useState([]);
@@ -74,7 +76,7 @@ const App = () => {
     const [overlayImageUrl, setOverlayImageUrl] = useState(null);
 
     // State for selected tags
-    const [selectedTags, setSelectedTags] = useState([]); // Array of selected tags
+    const [selectedTags, setSelectedTags] = useState([]);
 
     // State for tag search input in the select box
     const [tagSearch, setTagSearch] = useState('');
@@ -86,7 +88,7 @@ const App = () => {
     const [selectedOcr, setSelectedOcr] = useState('');
 
     // State for union/intersection mode
-    const [queryMode, setQueryMode] = useState('intersection'); // 'intersection' or 'union'
+    const [queryMode, setQueryMode] = useState('intersection');
 
     // State for query execution time
     const [queryTime, setQueryTime] = useState(null);
@@ -112,7 +114,7 @@ const App = () => {
     const [loadingDayRange, setLoadingDayRange] = useState(false);
 
     // State for day-of-week filter
-    const [selectedWeekdays, setSelectedWeekdays] = useState([]); // e.g., ['Monday', 'Tuesday']
+    const [selectedWeekdays, setSelectedWeekdays] = useState([]);
 
     // State for weekday range selection
     const [weekdayRange, setWeekdayRange] = useState([null, null]);
@@ -141,9 +143,9 @@ const App = () => {
 
     // State for KNN filter
     const [knnActive, setKnnActive] = useState(false);
-    const [knnValue, setKnnValue] = useState(5); // Default k=5
+    const [knnValue, setKnnValue] = useState(5);
     const [knnUri, setKnnUri] = useState(null);
-    const [knnReplaceMode, setKnnReplaceMode] = useState(false); // New state for replace mode
+    const [knnReplaceMode, setKnnReplaceMode] = useState(false);
 
     // Store the latest SPARQL query for live display
     const [liveSparqlQuery, setLiveSparqlQuery] = useState('');
@@ -196,7 +198,7 @@ const App = () => {
             // Map to array of { uri, id, day }
             const uris = bindings
                 .map(binding => ({
-                    uri: binding.s?.value,
+                    uri: binding.img?.value,
                     id: binding.id?.value,
                     day: binding.day?.value
                 }))
@@ -226,10 +228,10 @@ const App = () => {
             pushUnique(tagPrefixes, 'PREFIX tag: <http://lsc.dcu.ie/tag#>');
             pushUnique(tagPrefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
             if (queryMode === 'intersection') {
-                tagClauses.push(`  {\n${selectedTags.map(tag => `    ?s lsc:tag tag:${tag.replace(/\"/g, '\\"')} . `).join('\n')}\n  }`);
+                tagClauses.push(`  {\n${selectedTags.map(tag => `    ?img lsc:tag tag:${tag.replace(/\"/g, '\\"')} . `).join('\n')}\n  }`);
             } else {
                 const unionFilters = selectedTags
-                    .map(tag => `    { ?s lsc:tag tag:${tag.replace(/\"/g, '\\"')} . }`)
+                    .map(tag => `    { ?img lsc:tag tag:${tag.replace(/\"/g, '\\"')} . }`)
                     .join('\n    UNION\n');
                 tagClauses.push(`  {\n${unionFilters}\n  }`);
             }
@@ -243,7 +245,7 @@ const App = () => {
         let countryPrefixes = [];
         if (selectedCountry) {
             pushUnique(countryPrefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
-            countryClauses.push(`  {\n    ?s lsc:country \"${selectedCountry.replace(/\"/g, '\\"')}\" .\n  }`);
+            countryClauses.push(`  {\n    ?img lsc:country \"${selectedCountry.replace(/\"/g, '\\"')}\" .\n  }`);
         }
         return { countryClauses, countryPrefixes };
     };
@@ -254,7 +256,7 @@ const App = () => {
         let cityPrefixes = [];
         if (selectedCity) {
             pushUnique(cityPrefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
-            cityClauses.push(`  {\n    ?s lsc:city \"${selectedCity.replace(/\"/g, '\\"')}\" .\n  }`);
+            cityClauses.push(`  {\n    ?img lsc:city \"${selectedCity.replace(/\"/g, '\\"')}\" .\n  }`);
         }
         return { cityClauses, cityPrefixes };
     };
@@ -265,7 +267,7 @@ const App = () => {
         let locationPrefixes = [];
         if (selectedLocation) {
             pushUnique(locationPrefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
-            locationClauses.push(`  {\n    ?s lsc:location_name \"${selectedLocation.replace(/\"/g, '\\"')}\" .\n  }`);
+            locationClauses.push(`  {\n    ?img lsc:location_name \"${selectedLocation.replace(/\"/g, '\\"')}\" .\n  }`);
         }
         return { locationClauses, locationPrefixes };
     };
@@ -286,7 +288,7 @@ const App = () => {
                 pushUnique(datePrefixes, 'PREFIX megras: <http://megras.org/sparql#>');
             }
             let dateBlock = [
-                '    ?s lsc:day ?day .',
+                '    ?img lsc:day ?day .',
                 '    BIND(xsd:date(STRAFTER(STR(?day), "#")) AS ?dayDate)'
             ];
             // Date range
@@ -341,7 +343,7 @@ const App = () => {
             } else if (includeEndTime) {
                 filter.push(`?time <= \"${endTime.length === 5 ? endTime + ':00' : endTime}\"`);
             }
-            timeClauses.push(`  {\n    ?s lsc:local_time ?datetime .\n    BIND(SUBSTR(STR(?datetime), 12, 8) AS ?time)\n    FILTER (${filter.join(' && ')})\n  }`);
+            timeClauses.push(`  {\n    ?img lsc:local_time ?datetime .\n    BIND(SUBSTR(STR(?datetime), 12, 8) AS ?time)\n    FILTER (${filter.join(' && ')})\n  }`);
         }
         return { timeClauses, timePrefixes };
     };
@@ -354,7 +356,7 @@ const App = () => {
             pushUnique(categoryPrefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
             // Always use union logic for categories (OR)
             const unionFilters = selectedCategories
-                .map(cat => `    { ?s lsc:category \"${cat.replace(/\"/g, '\\"')}\" . }`)
+                .map(cat => `    { ?img lsc:category \"${cat.replace(/\"/g, '\\"')}\" . }`)
                 .join('\n    UNION\n');
             categoryClauses.push(`  {\n${unionFilters}\n  }`);
         }
@@ -367,9 +369,9 @@ const App = () => {
         let captionPrefixes = [];
         if (selectedCaption) {
             pushUnique(captionPrefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
-            // The triple: ?s lsc:caption ?caption .
+            // The triple: ?img lsc:caption ?caption .
             // Filter: case-insensitive substring match
-            captionClauses.push(`  {\n    ?s lsc:caption ?caption .\n    FILTER(CONTAINS(LCASE(STR(?caption)), LCASE(\"${selectedCaption.replace(/"/g, '\\"')}\")))\n  }`);
+            captionClauses.push(`  {\n    ?img lsc:caption ?caption .\n    FILTER(CONTAINS(LCASE(STR(?caption)), LCASE(\"${selectedCaption.replace(/"/g, '\\"')}\")))\n  }`);
         }
         return { captionClauses, captionPrefixes };
     };
@@ -380,7 +382,7 @@ const App = () => {
         let ocrPrefixes = [];
         if (selectedOcr) {
             pushUnique(ocrPrefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
-            ocrClauses.push(`  {\n    ?s lsc:ocr ?ocr .\n    FILTER(CONTAINS(LCASE(STR(?ocr)), LCASE(\"${selectedOcr.replace(/\"/g, '\\\"')}\")))\n  }`);
+            ocrClauses.push(`  {\n    ?img lsc:ocr ?ocr .\n    FILTER(CONTAINS(LCASE(STR(?ocr)), LCASE(\"${selectedOcr.replace(/\"/g, '\\\"')}\")))\n  }`);
         }
         return { ocrClauses, ocrPrefixes };
     };
@@ -388,7 +390,7 @@ const App = () => {
     // KNN filter block
     const getKnnBlock = () => {
         if (knnActive && knnUri && knnValue > 0) {
-            return `  <${knnUri}> implicit:clip${knnValue}nn ?s .`;
+            return `  <${knnUri}> implicit:clip${knnValue}nn ?img .`;
         }
         return '';
     };
@@ -449,7 +451,7 @@ const App = () => {
             case 'date':
                 return (
                     <CollapsiblePanel title="Date" forceCollapse={collapseAllFilters}>
-                        <DateSelector
+                        <DateFilter
                             minDate={minDay}
                             maxDate={maxDay}
                             startDate={startDay}
@@ -476,7 +478,7 @@ const App = () => {
             case 'time':
                 return (
                     <CollapsiblePanel title="Time" forceCollapse={collapseAllFilters}>
-                        <TimeSelector
+                        <TimeFilter
                             minTime={minTime}
                             maxTime={maxTime}
                             startTime={startTime}
@@ -575,16 +577,17 @@ const App = () => {
             return [
                 ...prefixes,
                 '',
-                'SELECT DISTINCT ?s ?id' + (groupByDay ? ' ?day' : ''),
+                'SELECT DISTINCT ?img ?id' + (groupByDay ? ' ?day' : ''),
                 'WHERE {',
-                '  ?s lsc:id ?id .',
-                groupByDay ? '  ?s lsc:day ?day .' : '',
+                '  ?img lsc:id ?id .',
+                groupByDay ? '  ?img lsc:day ?day .' : '',
                 knnBlock,
                 '}'
             ].filter(Boolean).join('\n');
         }
         if (knnBlock) {
             whereClauses.push(knnBlock);
+            pushUnique(prefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
             pushUnique(prefixes, 'PREFIX implicit: <http://megras.org/implicit/>');
         }
         filterOrder.forEach(type => {
@@ -627,20 +630,20 @@ const App = () => {
             }
         });
         // Only add the day triple if groupByDay is true and it is not already present from the date block
-        const dayTriple = '  ?s lsc:day ?day .';
+        const dayTriple = '  ?img lsc:day ?day .';
         const whereClausesString = whereClauses.join('\n');
         if (groupByDay && !whereClausesString.includes(dayTriple.trim())) {
             whereClauses.push(dayTriple);
         }
         prefixes = prefixes.sort((a, b) => a.localeCompare(b));
         // Select clause depends on groupByDay
-        const selectClause = groupByDay ? 'SELECT DISTINCT ?s ?id ?day' : 'SELECT DISTINCT ?s ?id';
+        const selectClause = groupByDay ? 'SELECT DISTINCT ?img ?id ?day' : 'SELECT DISTINCT ?img ?id';
         return [
             ...prefixes,
             '',
             selectClause,
             'WHERE {',
-            '  ?s lsc:id ?id .',
+            '  ?img lsc:id ?id .',
             whereClauses.join('\n'),
             '}'
         ].join('\n');
@@ -755,7 +758,7 @@ const App = () => {
         setSelectedCaption('');
         setSelectedOcr('');
         setKnnActive(false);
-        setTriggerFetch(0); // Reset triggerFetch so 'no results' message vanishes
+        setTriggerFetch(0);
     };
 
     const [collapseAllFilters, setCollapseAllFilters] = useState(false);

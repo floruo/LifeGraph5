@@ -1,6 +1,6 @@
 import React from "react";
 
-const TimeSelector = ({ minTime, maxTime, startTime, endTime, setStartTime, setEndTime, includeStartTime = false, setIncludeStartTime = () => {}, includeEndTime = false, setIncludeEndTime = () => {}, label = "Time" }) => {
+const TimeFilter = ({ minTime, maxTime, startTime, endTime, setStartTime, setEndTime, includeStartTime = false, setIncludeStartTime = () => {}, includeEndTime = false, setIncludeEndTime = () => {}, label = "Time" }) => {
     // Helper to check if a time string is valid (HH:mm or HH:mm:ss)
     const isValidTime = (time) => /^\d{2}:\d{2}(:\d{2})?$/.test(time);
     const clampTime = (time) => {
@@ -81,4 +81,4 @@ const TimeSelector = ({ minTime, maxTime, startTime, endTime, setStartTime, setE
     );
 };
 
-export default TimeSelector;
+export default TimeFilter;
