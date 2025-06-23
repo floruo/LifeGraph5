@@ -17,6 +17,7 @@ import { getOcrBlock } from './components/filter/OcrFilter.jsx';
 
 import { renderFilterPanel, CollapsiblePanel } from './components/RenderFilters.jsx';
 import ResultOverlay from './components/ResultOverlay.jsx';
+import SparqlQueryArea from "./components/SparqlQueryArea";
 
 
 // Configurable filter order
@@ -639,20 +640,11 @@ const App = () => {
                                     </label>
                                 </div>
                                 {/* Collapsible SPARQL Query area */}
-                                <div className="w-full">
-                                    <button
-                                        className="flex items-center gap-2 text-xs text-blue-700 hover:underline focus:outline-none mb-1"
-                                        onClick={() => setShowSparql(v => !v)}
-                                        type="button"
-                                    >
-                                        {showSparql ? '▼ Hide SPARQL Query' : '► Show SPARQL Query'}
-                                    </button>
-                                    {showSparql && (
-                                        <div className="w-full bg-white border border-gray-200 rounded p-2 mb-2 text-xs font-mono text-gray-700 whitespace-pre-wrap break-all">
-                                            {liveSparqlQuery || <span className="text-gray-400 italic">No query constructed.</span>}
-                                        </div>
-                                    )}
-                                </div>
+                                <SparqlQueryArea
+                                    showSparql={showSparql}
+                                    setShowSparql={setShowSparql}
+                                    liveSparqlQuery={liveSparqlQuery}
+                                />
                                 <div className="w-full flex flex-row items-center justify-center gap-4 mb-2">
                                     {imageUris.length > 0 && !loading && !error && (
                                         <>
