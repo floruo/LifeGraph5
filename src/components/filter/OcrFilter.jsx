@@ -6,7 +6,10 @@ export const getOcrBlock = (selectedOcr, pushUnique) => {
     let ocrPrefixes = [];
     if (selectedOcr) {
         pushUnique(ocrPrefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
-        ocrClauses.push(`  { ?img lsc:ocr ?ocr . FILTER(CONTAINS(LCASE(STR(?ocr)), LCASE(\"${selectedOcr.replace(/\"/g, '\\"')}\"))) }`);
+        ocrClauses.push(`  {`);
+        ocrClauses.push(`    ?img lsc:ocr ?ocr .`);
+        ocrClauses.push(`    FILTER(CONTAINS(LCASE(STR(?ocr)), LCASE(\"${selectedOcr.replace(/\"/g, '\\"')}\")))`);
+        ocrClauses.push(`  }`);
     }
     return { ocrClauses, ocrPrefixes };
 };

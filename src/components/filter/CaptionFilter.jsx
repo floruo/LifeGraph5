@@ -31,8 +31,11 @@ export const getCaptionBlock = (selectedCaption, pushUnique) => {
     let captionPrefixes = [];
     if (selectedCaption) {
         pushUnique(captionPrefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
-        // The triple: ?img lsc:caption ?caption .
-        captionClauses.push(`  { ?img lsc:caption ?caption . FILTER(CONTAINS(LCASE(STR(?caption)), LCASE(\"${selectedCaption.replace(/\"/g, '\\"')}\"))) }`);
+        captionClauses.push(`  {`);
+        captionClauses.push(`    ?img lsc:caption ?caption .`);
+        captionClauses.push(`    FILTER(CONTAINS(LCASE(STR(?caption)), LCASE(\"${selectedCaption.replace(/\"/g, '\\"')}\")))`);
+        captionClauses.push(`  }`);
+
     }
     return { captionClauses, captionPrefixes };
 };
