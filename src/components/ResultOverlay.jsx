@@ -43,47 +43,46 @@ const ResultOverlay = ({
                         style={{ objectFit: 'contain', display: 'block', margin: '0 auto' }}
                     />
                 </div>
-                {/* Controls below the image, never overlapping */}
+                {/* Controls and navigation in a single row, three columns */}
                 <div className="w-full flex flex-row items-center justify-between mt-2">
-                    {/* KNN filter controls - bottom left */}
-                    <div style={{ width: 160 }} className="flex flex-col items-stretch gap-2">
-                        <button
-                            className={`px-3 py-1 rounded bg-green-600 text-white text-xs font-semibold shadow hover:bg-green-700 transition w-full`}
-                            style={{ minWidth: 0 }}
-                            onClick={() => {
-                                setKnnActive(true);
-                                setKnnUri(overlayImageUrl);
-                                handleCloseOverlay();
-                            }}
-                            title="Add KNN block to query"
-                        >
-                            Add kNN Filter
-                        </button>
-                        <div className="flex flex-row items-center gap-2 mt-1 w-full">
-                            <input
-                                type="number"
-                                min={1}
-                                value={knnValue}
-                                onChange={e => setKnnValue(Math.max(1, parseInt(e.target.value) || 1))}
-                                className="w-16 px-2 py-1 border rounded text-sm"
-                                title="k"
-                            />
-                            <label className="flex items-center text-xs ml-2">
+                    {/* Left: KNN and Near Duplicate */}
+                    <div className="flex flex-row items-center gap-2" style={{ width: 320 }}>
+                        <div className="flex flex-col items-stretch gap-2" style={{ minWidth: 0 }}>
+                            <button
+                                className={`px-3 py-1 rounded bg-green-600 text-white text-xs font-semibold shadow hover:bg-green-700 transition w-full`}
+                                style={{ minWidth: 0 }}
+                                onClick={() => {
+                                    setKnnActive(true);
+                                    setKnnUri(overlayImageUrl);
+                                    handleCloseOverlay();
+                                }}
+                                title="Add KNN block to query"
+                            >
+                                Add kNN Filter
+                            </button>
+                            <div className="flex flex-row items-center gap-2 mt-1 w-full">
                                 <input
-                                    type="checkbox"
-                                    checked={knnReplaceMode}
-                                    onChange={e => setKnnReplaceMode(e.target.checked)}
-                                    className="mr-1"
+                                    type="number"
+                                    min={1}
+                                    value={knnValue}
+                                    onChange={e => setKnnValue(Math.max(1, parseInt(e.target.value) || 1))}
+                                    className="w-16 px-2 py-1 border rounded text-sm"
+                                    title="k"
                                 />
-                                Replace
-                            </label>
+                                <label className="flex items-center text-xs ml-2">
+                                    <input
+                                        type="checkbox"
+                                        checked={knnReplaceMode}
+                                        onChange={e => setKnnReplaceMode(e.target.checked)}
+                                        className="mr-1"
+                                    />
+                                    Replace
+                                </label>
+                            </div>
                         </div>
-                    </div>
-                    {/* Near Duplicate button - right of KNN controls */}
-                    <div className="flex flex-col items-stretch gap-2 ml-4">
                         <button
-                            className="px-3 py-1 rounded bg-purple-600 text-white text-xs font-semibold shadow hover:bg-purple-700 transition w-full"
-                            style={{ minWidth: 0 }}
+                            className="ml-4 px-3 py-1 rounded bg-purple-600 text-white text-xs font-semibold shadow hover:bg-purple-700 transition"
+                            style={{ minWidth: 0, height: 36 }}
                             onClick={() => {
                                 setNearDuplicateActive(true);
                                 setNearDuplicateUri(overlayImageUrl);
@@ -94,8 +93,8 @@ const ResultOverlay = ({
                             Near Duplicate
                         </button>
                     </div>
-                    {/* Navigation buttons - centered */}
-                    <div className="flex items-center justify-center flex-1">
+                    {/* Center: Navigation buttons */}
+                    <div className="flex items-center justify-center">
                         <button
                             onClick={showPrevImage}
                             disabled={currentIndex <= 0}
@@ -115,7 +114,8 @@ const ResultOverlay = ({
                             &#8594;
                         </button>
                     </div>
-                    <div className="w-32" /> {/* Spacer to balance layout */}
+                    {/* Right: Placeholder for alignment */}
+                    <div style={{ width: 320 }} />
                 </div>
             </div>
         </div>
@@ -123,4 +123,3 @@ const ResultOverlay = ({
 };
 
 export default ResultOverlay;
-
