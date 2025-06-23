@@ -17,7 +17,8 @@ const LocationSelector = ({
     };
 
     const handleRefreshLocations = () => {
-        fetchAllLocations(true); // Force refresh, bypass cache
+        setSelectedLocation('');
+        fetchAllLocations(true);
     };
 
     const filteredLocations = allLocations.filter(

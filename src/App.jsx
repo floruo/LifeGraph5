@@ -15,30 +15,13 @@ import TimeFilter, { getTimeBlock } from './components/filter/TimeFilter.jsx';
 import CaptionFilter, { getCaptionBlock } from './components/filter/CaptionFilter.jsx';
 import OcrFilter, { getOcrBlock } from './components/filter/OcrFilter.jsx';
 
+import { renderFilterPanel, CollapsiblePanel } from './components/RenderFilters.jsx';
+
 
 // Configurable filter order
 const filterOrder = FILTER_ORDER;
 
 // CollapsiblePanel component for left/right columns
-const CollapsiblePanel = ({ title, children, defaultOpen = false, className = "", forceCollapse }) => {
-    const [open, setOpen] = useState(defaultOpen);
-    useEffect(() => {
-        if (forceCollapse === true) setOpen(false);
-    }, [forceCollapse]);
-    return (
-        <div className={`bg-gray-50 rounded-lg shadow-md p-4 w-full max-w-xs flex flex-col items-start ${className}`}>
-            <button
-                className="mb-2 text-sm font-semibold text-blue-700 hover:underline focus:outline-none"
-                onClick={() => setOpen(o => !o)}
-                type="button"
-            >
-                {open ? '▼' : '►'} {title}
-            </button>
-            {open && <div className="w-full">{children}</div>}
-        </div>
-    );
-};
-
 const App = () => {
     // State to store URIs
     const [imageUris, setImageUris] = useState([]);
@@ -69,10 +52,11 @@ const App = () => {
     const [forceFetchCategories, setForceFetchCategories] = useState(false);
 
     // Location selector state
-    const [selectedLocation, setSelectedLocation] = useState('');
-    const [loadingLocations, setLoadingLocations] = useState(false);
     const [allLocations, setAllLocations] = useState([]);
+    const [loadingLocations, setLoadingLocations] = useState(true);
+    const [selectedLocation, setSelectedLocation] = useState('');
     const [locationSearch, setLocationSearch] = useState('');
+    const [forceFetchLocations, setForceFetchLocations] = useState(false);
 
     // State for URI overlay
     const [overlayImageUrl, setOverlayImageUrl] = useState(null);
@@ -100,10 +84,14 @@ const App = () => {
     const [showSparql, setShowSparql] = useState(false);
 
     // Day selector state
-    const [minDay, setMinDay] = useState('2019-01-01');
-    const [maxDay, setMaxDay] = useState('2019-12-31');
-    const [startDay, setStartDay] = useState('2019-01-01');
-    const [endDay, setEndDay] = useState('2019-12-31');
+    const [minDate, setminDate] = useState('2019-01-01');
+    const [maxDate, setmaxDate] = useState('2019-12-31');
+    const [startDate, setStartDate] = useState('2019-01-01');
+    const [endDate, setEndDate] = useState('2019-12-31');
+
+    // New: Range selection state
+    const [rangeType, setRangeType] = React.useState('none'); // none, 0, 1, 7, 30, custom
+    const [customDays, setCustomDays] = React.useState(1);
 
     // Checkbox state for including day in query
     const [includeStartDay, setIncludeStartDay] = useState(false);
@@ -155,16 +143,16 @@ const App = () => {
     // Update the live SPARQL query whenever filters or groupByDay change
     useEffect(() => {
         setLiveSparqlQuery(getSparqlQuery());
-    }, [selectedTags, selectedCountry, selectedCity, selectedLocation, includeStartDay, includeEndDay, startDay, endDay, selectedWeekdays, selectedYears, queryMode, selectedMonths, selectedCategories, groupByDay, includeStartTime, includeEndTime, startTime, endTime, selectedCaption, selectedOcr, knnActive]);
+    }, [selectedTags, selectedCountry, selectedCity, selectedLocation, includeStartDay, includeEndDay, startDate, endDate, selectedWeekdays, selectedYears, queryMode, selectedMonths, selectedCategories, groupByDay, includeStartTime, includeEndTime, startTime, endTime, selectedCaption, selectedOcr, knnActive]);
 
     // Fetch min/max day from SPARQL endpoint on mount or when forceFetchDayRange changes
     useEffect(() => {
         setLoadingDayRange(true);
         fetchDayRange(forceFetchDayRange).then(({ min, max }) => {
-            setMinDay(min);
-            setMaxDay(max);
-            setStartDay(min);
-            setEndDay(max);
+            setminDate(min);
+            setmaxDate(max);
+            setStartDate(min);
+            setEndDate(max);
             setLoadingDayRange(false);
         });
         if (forceFetchDayRange) setForceFetchDayRange(false);
@@ -222,155 +210,6 @@ const App = () => {
         }
     }
 
-    // Helper to render filter panels by type
-    const renderFilterPanel = (type) => {
-        switch (type) {
-            case 'tags':
-                return (
-                    <CollapsiblePanel title="Tags" forceCollapse={collapseAllFilters}>
-                        <TagSelector
-                            allTags={allTags}
-                            loadingTags={loadingTags}
-                            selectedTags={selectedTags}
-                            setSelectedTags={setSelectedTags}
-                            tagSearch={tagSearch}
-                            setTagSearch={setTagSearch}
-                            forceFetchTags={forceFetchTags}
-                            setForceFetchTags={setForceFetchTags}
-                            fetchAllTags={(force = false) => setForceFetchTags(force)}
-                            queryMode={queryMode}
-                            setQueryMode={setQueryMode}
-                        />
-                    </CollapsiblePanel>
-                );
-            case 'country':
-                return (
-                    <CollapsiblePanel title="Country" forceCollapse={collapseAllFilters}>
-                        <CountrySelector
-                            allCountries={allCountries}
-                            loadingCountries={loadingCountries}
-                            setLoadingCountries={setLoadingCountries}
-                            selectedCountry={selectedCountry}
-                            setSelectedCountry={setSelectedCountry}
-                            countrySearch={countrySearch}
-                            setCountrySearch={setCountrySearch}
-                            forceFetchCountries={forceFetchCountries}
-                            setForceFetchCountries={setForceFetchCountries}
-                            fetchAllCountries={(force = false) => setForceFetchCountries(force)}
-                        />
-                    </CollapsiblePanel>
-                );
-            case 'city':
-                return (
-                    <CollapsiblePanel title="City" forceCollapse={collapseAllFilters}>
-                        <CitySelector
-                            allCities={allCities}
-                            loadingCities={loadingCities}
-                            setLoadingCities={setLoadingCities}
-                            selectedCity={selectedCity}
-                            setSelectedCity={setSelectedCity}
-                            citySearch={citySearch}
-                            setCitySearch={setCitySearch}
-                            fetchAllCities={(force = false) => setForceFetchCities(force)}
-                        />
-                    </CollapsiblePanel>
-                );
-            case 'date':
-                return (
-                    <CollapsiblePanel title="Date" forceCollapse={collapseAllFilters}>
-                        <DateFilter
-                            minDate={minDay}
-                            maxDate={maxDay}
-                            startDate={startDay}
-                            endDate={endDay}
-                            setStartDate={setStartDay}
-                            setEndDate={setEndDay}
-                            includeStartDay={includeStartDay}
-                            setIncludeStartDay={setIncludeStartDay}
-                            includeEndDay={includeEndDay}
-                            setIncludeEndDay={setIncludeEndDay}
-                            onRefreshDayRange={() => setForceFetchDayRange(true)}
-                            selectedWeekdays={selectedWeekdays}
-                            setSelectedWeekdays={setSelectedWeekdays}
-                            weekdayRange={weekdayRange}
-                            setWeekdayRange={setWeekdayRange}
-                            selectedYears={selectedYears}
-                            setSelectedYears={setSelectedYears}
-                            selectedMonths={selectedMonths}
-                            setSelectedMonths={setSelectedMonths}
-                            loadingDayRange={loadingDayRange}
-                        />
-                    </CollapsiblePanel>
-                );
-            case 'time':
-                return (
-                    <CollapsiblePanel title="Time" forceCollapse={collapseAllFilters}>
-                        <TimeFilter
-                            minTime={minTime}
-                            maxTime={maxTime}
-                            startTime={startTime}
-                            endTime={endTime}
-                            setStartTime={setStartTime}
-                            setEndTime={setEndTime}
-                            includeStartTime={includeStartTime}
-                            setIncludeStartTime={setIncludeStartTime}
-                            includeEndTime={includeEndTime}
-                            setIncludeEndTime={setIncludeEndTime}
-                        />
-                    </CollapsiblePanel>
-                );
-            case 'category':
-                return (
-                    <CollapsiblePanel title="Category" forceCollapse={collapseAllFilters}>
-                        <CategorySelector
-                            categories={allCategories}
-                            loading={loadingCategories}
-                            selectedCategories={selectedCategories}
-                            setSelectedCategories={setSelectedCategories}
-                            fetchAllCategories={(force = false) => setForceFetchCategories(force)}
-                        />
-                    </CollapsiblePanel>
-                );
-            case 'location':
-                return (
-                    <CollapsiblePanel title="Location" forceCollapse={collapseAllFilters}>
-                        <LocationSelector
-                            selectedLocation={selectedLocation}
-                            setSelectedLocation={setSelectedLocation}
-                            loadingLocations={loadingLocations}
-                            setLoadingLocations={setLoadingLocations}
-                            allLocations={allLocations}
-                            setAllLocations={setAllLocations}
-                            locationSearch={locationSearch}
-                            setLocationSearch={setLocationSearch}
-                            fetchAllLocations={(force) => fetchAllLocations(setAllLocations, setLoadingLocations, force)}
-                        />
-                    </CollapsiblePanel>
-                );
-            case 'caption':
-                return (
-                    <CollapsiblePanel title="Caption" forceCollapse={collapseAllFilters}>
-                        <CaptionFilter
-                            selectedCaption={selectedCaption}
-                            setSelectedCaption={setSelectedCaption}
-                            loading={loading}
-                        />
-                    </CollapsiblePanel>
-                );
-            case 'ocr':
-                return (
-                    <CollapsiblePanel title="OCR" forceCollapse={collapseAllFilters}>
-                        <OcrFilter
-                            selectedOcr={selectedOcr}
-                            setSelectedOcr={setSelectedOcr}
-                            loading={loading}
-                        />
-                    </CollapsiblePanel>
-                );
-            default:
-                return null;
-        }
-    };
 
     // KNN filter block
     const getKnnBlock = () => {
@@ -443,7 +282,7 @@ const App = () => {
                 whereClauses.push(...locationClauses);
                 locationPrefixes.forEach(p => pushUnique(prefixes, p));
             } else if (type === 'date') {
-                const { dateClauses, datePrefixes } = getDateBlock(includeStartDay, includeEndDay, startDay, endDay, selectedWeekdays, selectedYears, selectedMonths, pushUnique);
+                const { dateClauses, datePrefixes } = getDateBlock(includeStartDay, includeEndDay, startDate, endDate, selectedWeekdays, selectedYears, selectedMonths, pushUnique);
                 whereClauses.push(...dateClauses);
                 datePrefixes.forEach(p => pushUnique(prefixes, p));
             } else if (type === 'time') {
@@ -536,8 +375,9 @@ const App = () => {
 
     // useEffect to fetch all locations once on component mount
     useEffect(() => {
-        fetchAllLocations(setAllLocations, setLoadingLocations);
-    }, []);
+        fetchAllLocations(setAllLocations, setLoadingLocations, forceFetchLocations);
+        if (forceFetchLocations) setForceFetchLocations(false);
+    }, [forceFetchLocations]);
 
     // Handler for URI overlay
     const handleImageClick = (originalUri) => {
@@ -571,12 +411,15 @@ const App = () => {
         setCitySearch('');
         setSelectedCity('');
         setSelectedLocation('');
-        setStartDay(minDay);
-        setEndDay(maxDay);
+        setStartDate(minDate);
+        setEndDate(maxDate);
         setIncludeStartDay(false);
         setIncludeEndDay(false);
+        setRangeType('none');
+        setCustomDays(1)
         setSelectedWeekdays([]);
         setWeekdayRange([null, null]);
+
         setImageUris([]);
         setError(null);
         setQueryTime(null);
@@ -673,7 +516,96 @@ const App = () => {
                         {/* Left column: Filters (configurable order) */}
                         <div className="flex flex-col gap-4">
                             {filterOrder.map(type => (
-                                <React.Fragment key={type}>{renderFilterPanel(type)}</React.Fragment>
+                                <React.Fragment key={type}>{renderFilterPanel(type, {
+                                    allTags,
+                                    loadingTags,
+                                    selectedTags,
+                                    setSelectedTags,
+                                    tagSearch,
+                                    setTagSearch,
+                                    forceFetchTags,
+                                    setForceFetchTags,
+                                    allCountries,
+                                    loadingCountries,
+                                    setLoadingCountries,
+                                    selectedCountry,
+                                    setSelectedCountry,
+                                    countrySearch,
+                                    setCountrySearch,
+                                    forceFetchCountries,
+                                    setForceFetchCountries,
+                                    allCities,
+                                    loadingCities,
+                                    setLoadingCities,
+                                    selectedCity,
+                                    setSelectedCity,
+                                    citySearch,
+                                    setCitySearch,
+                                    forceFetchCities,
+                                    setForceFetchCities,
+                                    allCategories,
+                                    loadingCategories,
+                                    selectedCategories,
+                                    setSelectedCategories,
+                                    forceFetchCategories,
+                                    setForceFetchCategories,
+                                    selectedLocation,
+                                    setSelectedLocation,
+                                    locationSearch,
+                                    setLocationSearch,
+                                    loadingLocations,
+                                    setLoadingLocations,
+                                    allLocations,
+                                    setAllLocations,
+                                    forceFetchLocations,
+                                    setForceFetchLocations,
+                                    minDate,
+                                    maxDate,
+                                    startDate,
+                                    endDate,
+                                    setStartDate,
+                                    setEndDate,
+                                    includeStartDay,
+                                    setIncludeStartDay,
+                                    includeEndDay,
+                                    setIncludeEndDay,
+                                    fetchDayRange,
+                                    forceFetchDayRange,
+                                    setForceFetchDayRange,
+                                    loadingDayRange,
+                                    rangeType,
+                                    setRangeType,
+                                    customDays,
+                                    setCustomDays,
+                                    selectedWeekdays,
+                                    setSelectedWeekdays,
+                                    weekdayRange,
+                                    setWeekdayRange,
+                                    selectedYears,
+                                    setSelectedYears,
+                                    selectedMonths,
+                                    setSelectedMonths,
+                                    groupByDay,
+                                    setGroupByDay,
+                                    minTime,
+                                    maxTime,
+                                    startTime,
+                                    endTime,
+                                    setStartTime,
+                                    setEndTime,
+                                    includeStartTime,
+                                    setIncludeStartTime,
+                                    includeEndTime,
+                                    setIncludeEndTime,
+                                    selectedCaption,
+                                    setSelectedCaption,
+                                    selectedOcr,
+                                    setSelectedOcr,
+                                    queryMode,
+                                    setQueryMode,
+                                    loading,
+                                    collapseAllFilters
+                                })}</React.Fragment>
                             ))}
                         </div>
                     </div>

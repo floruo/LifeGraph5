@@ -52,7 +52,6 @@ export const fetchAllTags = async (setAllTags, setLoadingTags, force = false) =>
                 ?s <http://lsc.dcu.ie/schema#tag> ?tag .
             }
         `;
-        console.log("Fetching tags from SPARQL endpoint...");
         const bindings = await executeSparqlQuery(tagsQuery);
         const tags = bindings
             .map(binding => {

@@ -10,7 +10,7 @@ const weekdays = [
     "Sunday",
 ];
 
-const DateFilter = ({ minDate, maxDate, startDate, endDate, setStartDate, setEndDate, includeStartDay, setIncludeStartDay, includeEndDay, setIncludeEndDay, onRefreshDayRange, onDayChange, selectedWeekdays, setSelectedWeekdays, weekdayRange, setWeekdayRange, selectedYears, setSelectedYears, selectedMonths, setSelectedMonths, loadingDayRange }) => {
+const DateFilter = ({ minDate, maxDate, startDate, endDate, setStartDate, setEndDate, includeStartDay, setIncludeStartDay, includeEndDay, setIncludeEndDay, fetchDayRange, onDayChange, rangeType, setRangeType, customDays, setCustomDays, selectedWeekdays, setSelectedWeekdays, weekdayRange, setWeekdayRange, selectedYears, setSelectedYears, selectedMonths, setSelectedMonths, loadingDayRange }) => {
     // Helper to format date for input[type="range"]
     const toInputValue = (date) => date.split('-').join('');
     const fromInputValue = (val) => {
@@ -133,10 +133,6 @@ const DateFilter = ({ minDate, maxDate, startDate, endDate, setStartDate, setEnd
         setWeekdayRange([null, null]);
     };
 
-    // New: Range selection state
-    const [rangeType, setRangeType] = React.useState('none'); // none, 0, 1, 7, 30, custom
-    const [customDays, setCustomDays] = React.useState(1);
-
     // Helper to add days or months to a date string (yyyy-mm-dd)
     const addDaysOrMonth = (dateStr, days, addMonth = false) => {
         const d = new Date(dateStr);
@@ -168,12 +164,26 @@ const DateFilter = ({ minDate, maxDate, startDate, endDate, setStartDate, setEnd
         }
     }, [rangeType, customDays, startDate]);
 
+    const handleRefreshDayRange = () => {
+        setStartDate(minDate);
+        setEndDate(maxDate);
+        setIncludeStartDay(false);
+        setIncludeEndDay(false);
+        setRangeType('none');
+        setCustomDays(1)
+        handleClearYears();
+        handleClearMonths();
+        setSelectedWeekdays([]);
+
+        fetchDayRange(true);
+    };
+
     return (
         <div className="flex flex-col gap-4 w-full">
             <div className="flex flex-row items-center gap-2 mb-2">
                 <button
                     className="px-2 py-1 bg-gray-200 text-xs rounded hover:bg-gray-300"
-                    onClick={onRefreshDayRange}
+                    onClick={handleRefreshDayRange}
                     type="button"
                 >
                     Refresh Date Range

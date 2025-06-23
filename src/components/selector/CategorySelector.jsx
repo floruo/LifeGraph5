@@ -4,7 +4,7 @@ const CategorySelector = ({
   selectedCategories,
   setSelectedCategories,
   loading,
-  categories,
+  allCategories,
   fetchAllCategories,
 }) => {
   const [categorySearch, setCategorySearch] = React.useState("");
@@ -31,7 +31,7 @@ const CategorySelector = ({
     setSelectedCategories([]);
   };
 
-  const filteredCategories = categories && Array.isArray(categories) ? categories.filter(
+  const filteredCategories = allCategories && Array.isArray(allCategories) ? allCategories.filter(
     (c) =>
       c.toLowerCase().includes(categorySearch) &&
       !selectedCategories.map((sc) => sc.toLowerCase()).includes(c.toLowerCase())
