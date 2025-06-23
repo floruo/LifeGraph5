@@ -4,16 +4,16 @@ import React, { useState, useEffect } from 'react';
 import { FILTER_ORDER } from './config';
 import { executeSparqlQuery, fetchAllTags, fetchAllCountries, fetchDayRange, fetchAllCategories, fetchAllCities, fetchAllLocations } from './utils/sparql';
 
-import TagSelector, { getTagBlock } from './components/selector/TagSelector.jsx';
-import CountrySelector, { getCountryBlock } from './components/selector/CountrySelector.jsx';
-import CategorySelector, { getCategoryBlock } from './components/selector/CategorySelector.jsx';
-import CitySelector, { getCityBlock } from './components/selector/CitySelector.jsx';
-import LocationSelector, { getLocationBlock } from './components/selector/LocationSelector.jsx';
+import { getTagBlock } from './components/selector/TagSelector.jsx';
+import { getCountryBlock } from './components/selector/CountrySelector.jsx';
+import { getCategoryBlock } from './components/selector/CategorySelector.jsx';
+import { getCityBlock } from './components/selector/CitySelector.jsx';
+import { getLocationBlock } from './components/selector/LocationSelector.jsx';
 
-import DateFilter, { getDateBlock } from './components/filter/DateFilter.jsx';
-import TimeFilter, { getTimeBlock } from './components/filter/TimeFilter.jsx';
-import CaptionFilter, { getCaptionBlock } from './components/filter/CaptionFilter.jsx';
-import OcrFilter, { getOcrBlock } from './components/filter/OcrFilter.jsx';
+import { getDateBlock } from './components/filter/DateFilter.jsx';
+import { getTimeBlock } from './components/filter/TimeFilter.jsx';
+import { getCaptionBlock } from './components/filter/CaptionFilter.jsx';
+import { getOcrBlock } from './components/filter/OcrFilter.jsx';
 
 import { renderFilterPanel, CollapsiblePanel } from './components/RenderFilters.jsx';
 import ResultOverlay from './components/ResultOverlay.jsx';
