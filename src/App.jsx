@@ -15,7 +15,7 @@ import { getTimeBlock } from './components/filter/TimeFilter.jsx';
 import { getCaptionBlock } from './components/filter/CaptionFilter.jsx';
 import { getOcrBlock } from './components/filter/OcrFilter.jsx';
 
-import { renderFilterPanel, CollapsiblePanel } from './components/RenderFilters.jsx';
+import { renderFilterPanel } from './components/RenderFilters.jsx';
 import ResultOverlay from './components/ResultOverlay.jsx';
 import SparqlQueryArea from "./components/SparqlQueryArea";
 import ResultDisplay from './components/ResultDisplay.jsx';
@@ -24,7 +24,7 @@ import ResultDisplay from './components/ResultDisplay.jsx';
 // Configurable filter order
 const filterOrder = FILTER_ORDER;
 
-// CollapsiblePanel component for left/right columns
+// Main App component
 const App = () => {
     // State to store URIs
     const [imageUris, setImageUris] = useState([]);
@@ -213,7 +213,6 @@ const App = () => {
         }
     }
 
-
     // KNN filter block
     const getKnnBlock = () => {
         if (knnActive && knnUri && knnValue > 0) {
@@ -334,7 +333,6 @@ const App = () => {
     // useEffect to trigger the fetch function whenever 'triggerFetch' state changes
     useEffect(() => {
         fetchImageUris();
-        // eslint-disable-next-line
     }, [triggerFetch]);
 
     // useEffect to fetch all tags once on component mount or when forceFetchTags changes
@@ -342,7 +340,7 @@ const App = () => {
         fetchAllTags(
             setAllTags,
             setLoadingTags,
-            /* force */ forceFetchTags
+            forceFetchTags
         );
         if (forceFetchTags) {
             // Remove cache so fetchAllTags will fetch from server
@@ -353,30 +351,27 @@ const App = () => {
             }
             setForceFetchTags(false);
         }
-        // eslint-disable-next-line
     }, [forceFetchTags]);
 
-    // useEffect to fetch all countries once on component mount or when forceFetchCountries changes
+    // useEffect to fetch all countries
     useEffect(() => {
         fetchAllCountries(setAllCountries, setLoadingCountries, forceFetchCountries);
         if (forceFetchCountries) setForceFetchCountries(false);
-        // eslint-disable-next-line
     }, [forceFetchCountries]);
 
     // useEffect to fetch all cities from imageUris (or your data source)
     useEffect(() => {
         fetchAllCities(setAllCities, setLoadingCities, forceFetchCities);
         if (forceFetchCities) setForceFetchCities(false);
-        // eslint-disable-next-line
     }, [forceFetchCities]);
 
-    // useEffect to fetch all categories once on component mount
+    // useEffect to fetch all categories
     useEffect(() => {
         fetchAllCategories(setAllCategories, setLoadingCategories, forceFetchCategories);
         if (forceFetchCategories) setForceFetchCategories(false);
     }, [forceFetchCategories]);
 
-    // useEffect to fetch all locations once on component mount
+    // useEffect to fetch all locations
     useEffect(() => {
         fetchAllLocations(setAllLocations, setLoadingLocations, forceFetchLocations);
         if (forceFetchLocations) setForceFetchLocations(false);
@@ -449,27 +444,6 @@ const App = () => {
     }, [collapseAllFilters]);
 
     const [fullscreenResults, setFullscreenResults] = useState(false);
-
-    // Helper to group imageUris by year, month, day (with correct ordering)
-    function groupByYearMonthDay(imageUris) {
-        const groups = {};
-        imageUris.forEach(obj => {
-            let dateStr = obj.day ? obj.day.replace('http://lsc.dcu.ie/day#', '') : 'Unknown Day';
-            let year = 'Unknown Year', month = 'Unknown Month', day = 'Unknown Day';
-            if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-                [year, month, day] = dateStr.split('-');
-            } else if (/^\d{4}-\d{2}$/.test(dateStr)) {
-                [year, month] = dateStr.split('-');
-            } else if (/^\d{4}$/.test(dateStr)) {
-                year = dateStr;
-            }
-            if (!groups[year]) groups[year] = {};
-            if (!groups[year][month]) groups[year][month] = {};
-            if (!groups[year][month][dateStr]) groups[year][month][dateStr] = [];
-            groups[year][month][dateStr].push(obj.uri);
-        });
-        return groups;
-    }
 
     // Find the index of the current image in the list
     const currentIndex = imageUris.findIndex(obj => obj.uri === overlayImageUrl);
@@ -698,7 +672,7 @@ const App = () => {
             </div>
 
 
-            {/* URI Overlay */}
+            {/* Image Overlay */}
             <ResultOverlay
                 overlayImageUrl={overlayImageUrl}
                 imageUris={imageUris}
