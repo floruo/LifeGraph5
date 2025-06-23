@@ -10,6 +10,8 @@ const ResultOverlay = ({
     setKnnValue,
     knnReplaceMode,
     setKnnReplaceMode,
+    setNearDuplicateActive,
+    setNearDuplicateUri,
     showPrevImage,
     showNextImage,
     currentIndex
@@ -76,6 +78,21 @@ const ResultOverlay = ({
                                 Replace
                             </label>
                         </div>
+                    </div>
+                    {/* Near Duplicate button - right of KNN controls */}
+                    <div className="flex flex-col items-stretch gap-2 ml-4">
+                        <button
+                            className="px-3 py-1 rounded bg-purple-600 text-white text-xs font-semibold shadow hover:bg-purple-700 transition w-full"
+                            style={{ minWidth: 0 }}
+                            onClick={() => {
+                                setNearDuplicateActive(true);
+                                setNearDuplicateUri(overlayImageUrl);
+                                handleCloseOverlay();
+                            }}
+                            title="Show near duplicates for this image"
+                        >
+                            Near Duplicate
+                        </button>
                     </div>
                     {/* Navigation buttons - centered */}
                     <div className="flex items-center justify-center flex-1">

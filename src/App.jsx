@@ -140,13 +140,53 @@ const App = () => {
     const [knnUri, setKnnUri] = useState(null);
     const [knnReplaceMode, setKnnReplaceMode] = useState(true);
 
+    // State for KNN filter
+    const [nearDuplicateActive, setNearDuplicateActive] = useState(false);
+    const [nearDuplicateUri, setNearDuplicateUri] = useState(null);
+
+    // Effect: When nearDuplicateActive is set to true, clear all other filters
+    useEffect(() => {
+        if (nearDuplicateActive) {
+            setSelectedTags([]);
+            setSelectedCountry('');
+            setTagSearch('');
+            setCountrySearch('');
+            setCitySearch('');
+            setSelectedCity('');
+            setSelectedLocation('');
+            setStartDate(minDate);
+            setEndDate(maxDate);
+            setIncludeStartDay(false);
+            setIncludeEndDay(false);
+            setRangeType('none');
+            setCustomDays(1);
+            setSelectedWeekdays([]);
+            setWeekdayRange([null, null]);
+            setImageUris([]);
+            setError(null);
+            setQueryTime(null);
+            setSelectedYears([]);
+            setSelectedMonths([]);
+            setSelectedCategories([]);
+            setStartTime(minTime);
+            setEndTime(maxTime);
+            setIncludeStartTime(false);
+            setIncludeEndTime(false);
+            setSelectedCaption('');
+            setSelectedOcr('');
+            setKnnActive(false);
+            setTriggerFetch(0);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [nearDuplicateActive]);
+
     // Store the latest SPARQL query for live display
     const [liveSparqlQuery, setLiveSparqlQuery] = useState('');
 
     // Update the live SPARQL query whenever filters or groupByDay change
     useEffect(() => {
         setLiveSparqlQuery(getSparqlQuery());
-    }, [selectedTags, selectedCountry, selectedCity, selectedLocation, includeStartDay, includeEndDay, startDate, endDate, selectedWeekdays, selectedYears, queryMode, selectedMonths, selectedCategories, groupByDay, includeStartTime, includeEndTime, startTime, endTime, selectedCaption, selectedOcr, knnActive]);
+    }, [selectedTags, selectedCountry, selectedCity, selectedLocation, includeStartDay, includeEndDay, startDate, endDate, selectedWeekdays, selectedYears, queryMode, selectedMonths, selectedCategories, groupByDay, includeStartTime, includeEndTime, startTime, endTime, selectedCaption, selectedOcr, knnActive, nearDuplicateActive]);
 
     // Fetch min/max day from SPARQL endpoint on mount or when forceFetchDayRange changes
     useEffect(() => {
@@ -167,7 +207,6 @@ const App = () => {
             setQueryMode('intersection');
         }
     }, [selectedTags, queryMode]);
-
 
     // Function to fetch data from the SPARQL endpoint based on the constructed query
     const fetchImageUris = async () => {
@@ -221,6 +260,14 @@ const App = () => {
         return '';
     };
 
+    // nearDuplicate filter block
+    const getNearDuplicateBlock = () => {
+        if (nearDuplicateActive && nearDuplicateUri) {
+            return `  <${nearDuplicateUri}> implicit:clipNearDuplicate ?img .`;
+        }
+        return '';
+    };
+
     // Main SPARQL query builder
     const getSparqlQuery = () => {
         if (
@@ -238,7 +285,8 @@ const App = () => {
             !selectedLocation &&
             !selectedCaption &&
             !selectedOcr &&
-            !knnActive
+            !knnActive &&
+            !nearDuplicateActive
         ) {
             return '';
         }
@@ -260,6 +308,14 @@ const App = () => {
                 knnBlock,
                 '}'
             ].filter(Boolean).join('\n');
+        }
+        if (nearDuplicateActive && nearDuplicateUri) {
+            const nearDuplicateBlock = getNearDuplicateBlock();
+            if (nearDuplicateBlock) {
+                whereClauses.push(nearDuplicateBlock);
+                pushUnique(prefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
+                pushUnique(prefixes, 'PREFIX implicit: <http://megras.org/implicit/>');
+            }
         }
         if (knnBlock) {
             whereClauses.push(knnBlock);
@@ -431,6 +487,7 @@ const App = () => {
         setSelectedCaption('');
         setSelectedOcr('');
         setKnnActive(false);
+        setNearDuplicateActive(false);
         setTriggerFetch(0);
     };
 
@@ -683,6 +740,8 @@ const App = () => {
                 setKnnValue={setKnnValue}
                 knnReplaceMode={knnReplaceMode}
                 setKnnReplaceMode={setKnnReplaceMode}
+                setNearDuplicateActive={setNearDuplicateActive}
+                setNearDuplicateUri={setNearDuplicateUri}
                 showPrevImage={showPrevImage}
                 showNextImage={showNextImage}
                 currentIndex={currentIndex}
