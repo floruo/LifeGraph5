@@ -138,7 +138,7 @@ const App = () => {
     const [knnActive, setKnnActive] = useState(false);
     const [knnValue, setKnnValue] = useState(5);
     const [knnUri, setKnnUri] = useState(null);
-    const [knnReplaceMode, setKnnReplaceMode] = useState(false);
+    const [knnReplaceMode, setKnnReplaceMode] = useState(true);
 
     // Store the latest SPARQL query for live display
     const [liveSparqlQuery, setLiveSparqlQuery] = useState('');
