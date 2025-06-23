@@ -14,6 +14,7 @@ import { getDateBlock } from './components/filter/DateFilter.jsx';
 import { getTimeBlock } from './components/filter/TimeFilter.jsx';
 import { getCaptionBlock } from './components/filter/CaptionFilter.jsx';
 import { getOcrBlock } from './components/filter/OcrFilter.jsx';
+import { getClipSimilarityBlock } from "./components/filter/ClipFilter.jsx";
 
 import { renderFilterPanel } from './components/RenderFilters.jsx';
 import ResultOverlay from './components/ResultOverlay.jsx';
@@ -74,6 +75,10 @@ const App = () => {
 
     // State for caption filter
     const [selectedCaption, setSelectedCaption] = useState('');
+
+    // States for CLIP similarity filter
+    const [clipSimilarityText, setClipSimilarityText] = useState('');
+    const [clipSimilarityThreshold, setClipSimilarityThreshold] = useState(0.8);
 
     // State for OCR filter
     const [selectedOcr, setSelectedOcr] = useState('');
@@ -175,6 +180,7 @@ const App = () => {
             setIncludeStartTime(false);
             setIncludeEndTime(false);
             setSelectedCaption('');
+            setClipSimilarityText('');
             setSelectedOcr('');
             setKnnActive(false);
             //setTriggerFetch(0);
@@ -188,7 +194,7 @@ const App = () => {
     // Update the live SPARQL query whenever filters or groupByDay change
     useEffect(() => {
         setLiveSparqlQuery(getSparqlQuery());
-    }, [selectedTags, selectedCountry, selectedCity, selectedLocation, includeStartDay, includeEndDay, startDate, endDate, selectedWeekdays, selectedYears, queryMode, selectedMonths, selectedCategories, groupByDay, includeStartTime, includeEndTime, startTime, endTime, selectedCaption, selectedOcr, knnActive, nearDuplicateActive]);
+    }, [selectedTags, selectedCountry, selectedCity, selectedLocation, includeStartDay, includeEndDay, startDate, endDate, selectedWeekdays, selectedYears, queryMode, selectedMonths, selectedCategories, groupByDay, includeStartTime, includeEndTime, startTime, endTime, selectedCaption, clipSimilarityText, clipSimilarityThreshold, selectedOcr, knnActive, nearDuplicateActive]);
 
     // Fetch min/max day from SPARQL endpoint on mount or when forceFetchDayRange changes
     useEffect(() => {
@@ -288,7 +294,8 @@ const App = () => {
             !selectedCaption &&
             !selectedOcr &&
             !knnActive &&
-            !nearDuplicateActive
+            !nearDuplicateActive &&
+            !clipSimilarityText
         ) {
             return '';
         }
@@ -361,6 +368,10 @@ const App = () => {
                 const { ocrClauses, ocrPrefixes } = getOcrBlock(selectedOcr, pushUnique);
                 whereClauses.push(...ocrClauses);
                 ocrPrefixes.forEach(p => pushUnique(prefixes, p));
+            } else if (type === 'clip') {
+                const { similarityClauses, similarityPrefixes } = getClipSimilarityBlock(clipSimilarityText, clipSimilarityThreshold, pushUnique);
+                whereClauses.push(...similarityClauses);
+                similarityPrefixes.forEach(p => pushUnique(prefixes, p));
             }
         });
         // Only add the day triple if groupByDay is true and it is not already present from the date block
@@ -487,6 +498,7 @@ const App = () => {
         setIncludeStartTime(false);
         setIncludeEndTime(false);
         setSelectedCaption('');
+        setClipSimilarityText('');
         setSelectedOcr('');
         setKnnActive(false);
         setNearDuplicateActive(false);
@@ -635,6 +647,10 @@ const App = () => {
                                     setIncludeEndTime,
                                     selectedCaption,
                                     setSelectedCaption,
+                                    clipSimilarityText,
+                                    setClipSimilarityText,
+                                    clipSimilarityThreshold,
+                                    setClipSimilarityThreshold,
                                     selectedOcr,
                                     setSelectedOcr,
                                     queryMode,

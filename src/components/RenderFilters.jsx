@@ -8,6 +8,7 @@ import DateFilter from './filter/DateFilter.jsx';
 import TimeFilter from './filter/TimeFilter.jsx';
 import CaptionFilter from './filter/CaptionFilter.jsx';
 import OcrFilter from './filter/OcrFilter.jsx';
+import ClipFilter from './filter/ClipFilter.jsx';
 
 export const CollapsiblePanel = ({ title, children, defaultOpen = false, className = "", forceCollapse, active = false }) => {
     const [open, setOpen] = useState(defaultOpen);
@@ -125,6 +126,12 @@ export const renderFilterPanel = (type, props) => {
             return (
                 <CollapsiblePanel title="OCR" forceCollapse={collapseAllFilters} active={isActive}>
                     <OcrFilter {...props} />
+                </CollapsiblePanel>
+            );
+        case 'clip':
+            return (
+                <CollapsiblePanel title="CLIP" forceCollapse={collapseAllFilters} active={isActive}>
+                    <ClipFilter {...props} />
                 </CollapsiblePanel>
             );
         default:

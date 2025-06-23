@@ -14,6 +14,7 @@ export const FILTER_ORDER = [
     'time',
     'caption',
     'ocr',
+    'clip',
 ];
 
 export const RESULTS_PER_ROW = 8;
