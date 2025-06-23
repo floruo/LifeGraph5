@@ -6,12 +6,15 @@ const ResultDisplay = ({
   loading,
   error,
   groupByDay,
-  fullscreenResults,
-  setFullscreenResults,
   handleImageClick,
   triggerFetch,
-  selectedTags
+  selectedTags,
+  overlayImageUrl,
+  configuredImagesPerRow
 }) => {
+  const [imagesPerRow, setImagesPerRow] = React.useState(configuredImagesPerRow);
+  const [fullscreen, setFullscreen] = React.useState(false);
+
   // Helper to group imageUris by year, month, day (with correct ordering)
   function groupByYearMonthDay(imageUris) {
     const groups = {};
@@ -32,6 +35,16 @@ const ResultDisplay = ({
     });
     return groups;
   }
+
+  React.useEffect(() => {
+    if (!fullscreen) return;
+    const handleKeyDown = (e) => {
+      // Only exit fullscreen if overlay is not open
+      if (e.key === 'Escape' && !overlayImageUrl) setFullscreen(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [fullscreen, overlayImageUrl]);
 
   if (loading) {
     return (
@@ -57,7 +70,31 @@ const ResultDisplay = ({
     );
   }
   return (
-    <div className="w-full">
+    <div className={`w-full flex-1${fullscreen ? ' fixed inset-0 z-50 bg-white p-8 overflow-auto' : ''}`}>
+      {imageUris.length > 0 && (
+        <div className="w-full flex justify-between items-center mb-2 gap-2">
+          <div className="flex items-center">
+            <label htmlFor="imagesPerRow" className="mr-2 text-sm text-gray-700">Images per row:</label>
+            <select
+              id="imagesPerRow"
+              value={imagesPerRow}
+              onChange={e => setImagesPerRow(Number(e.target.value))}
+              className="border rounded px-2 py-1 text-sm"
+            >
+              {[4, 6, 8, 10, 12].map(num => (
+                <option key={num} value={num}>{num}</option>
+              ))}
+            </select>
+          </div>
+          <button
+            className={`px-3 py-1 rounded shadow text-xs transition ${fullscreen ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}
+            onClick={() => setFullscreen(f => !f)}
+            type="button"
+          >
+            {fullscreen ? 'Exit Fullscreen' : 'Fullscreen Results'}
+          </button>
+        </div>
+      )}
       {imageUris.length > 0 ? (
         groupByDay ? (
           (() => {
@@ -69,7 +106,7 @@ const ResultDisplay = ({
               if (days.length > 1) {
                 return days.map(day => (
                   <CollapsiblePanel key={day} title={day} defaultOpen={false} className="w-full !max-w-none">
-                    <div className="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <div className="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-${imagesPerRow gap-4">
                       {daysObj[day].map((uri, index) => (
                         <div
                           key={index}
@@ -89,7 +126,7 @@ const ResultDisplay = ({
                 ));
               } else if (days.length === 1) {
                 return (
-                  <div className="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  <div className="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-${imagesPerRow gap-4">
                     {daysObj[days[0]].map((uri, index) => (
                       <div
                         key={index}
@@ -148,7 +185,7 @@ const ResultDisplay = ({
             }
           })()
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-${imagesPerRow} gap-4`}>
             {imageUris.map((obj, index) => (
               <div
                 key={index}
@@ -175,4 +212,3 @@ const ResultDisplay = ({
 };
 
 export default ResultDisplay;
-

@@ -1,7 +1,7 @@
 // App.jsx
 import React, { useState, useEffect } from 'react';
 
-import { FILTER_ORDER } from './config';
+import { FILTER_ORDER, RESULTS_PER_ROW } from './config';
 import { executeSparqlQuery, fetchAllTags, fetchAllCountries, fetchDayRange, fetchAllCategories, fetchAllCities, fetchAllLocations } from './utils/sparql';
 
 import { getTagBlock } from './components/selector/TagSelector.jsx';
@@ -23,6 +23,8 @@ import ResultDisplay from './components/ResultDisplay.jsx';
 
 // Configurable filter order
 const filterOrder = FILTER_ORDER;
+// Configurable number of images per row
+const imagesPerRow = RESULTS_PER_ROW;
 
 // Main App component
 const App = () => {
@@ -175,7 +177,7 @@ const App = () => {
             setSelectedCaption('');
             setSelectedOcr('');
             setKnnActive(false);
-            setTriggerFetch(0);
+            //setTriggerFetch(0);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [nearDuplicateActive]);
@@ -488,7 +490,7 @@ const App = () => {
         setSelectedOcr('');
         setKnnActive(false);
         setNearDuplicateActive(false);
-        setTriggerFetch(0);
+        //setTriggerFetch(0);
     };
 
     const [collapseAllFilters, setCollapseAllFilters] = useState(false);
@@ -700,28 +702,17 @@ const App = () => {
                             </div>
                         </div>
                         {/* Results area below */}
-                        <div className={`w-full flex-1${fullscreenResults ? ' fixed inset-0 z-50 bg-white p-8 overflow-auto' : ''}`}>
-                            {imageUris.length > 0 && (
-                                <div className="w-full flex justify-end mb-2 gap-2">
-                                    <button
-                                        className={`px-3 py-1 rounded shadow text-xs transition ${fullscreenResults ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}
-                                        onClick={() => setFullscreenResults(f => !f)}
-                                        type="button"
-                                    >
-                                        {fullscreenResults ? 'Exit Fullscreen' : 'Fullscreen Results'}
-                                    </button>
-                                </div>
-                            )}
+                        <div className="w-full flex-1">
                             <ResultDisplay
                                 imageUris={imageUris}
                                 loading={loading}
                                 error={error}
                                 groupByDay={groupByDay}
-                                fullscreenResults={fullscreenResults}
-                                setFullscreenResults={setFullscreenResults}
                                 handleImageClick={handleImageClick}
                                 triggerFetch={triggerFetch}
                                 selectedTags={selectedTags}
+                                overlayImageUrl={overlayImageUrl}
+                                configuredImagesPerRow={imagesPerRow}
                             />
                         </div>
                     </div>

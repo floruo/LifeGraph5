@@ -16,3 +16,5 @@ export const FILTER_ORDER = [
     'ocr',
 ];
 
+export const RESULTS_PER_ROW = 8;
+
