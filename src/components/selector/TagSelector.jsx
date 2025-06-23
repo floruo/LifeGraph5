@@ -144,4 +144,23 @@ const TagSelector = ({
     );
 };
 
+// Returns SPARQL tag filter block and prefixes
+export const getTagBlock = (selectedTags, queryMode, pushUnique) => {
+    let tagClauses = [];
+    let tagPrefixes = [];
+    if (selectedTags.length) {
+        pushUnique(tagPrefixes, 'PREFIX tag: <http://lsc.dcu.ie/tag#>');
+        pushUnique(tagPrefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
+        if (queryMode === 'intersection') {
+            tagClauses.push(`  {\n${selectedTags.map(tag => `    ?img lsc:tag tag:${tag.replace(/\"/g, '\\"')} . `).join('\n')}\n  }`);
+        } else {
+            const unionFilters = selectedTags
+                .map(tag => `    { ?img lsc:tag tag:${tag.replace(/\"/g, '\\"')} . }`)
+                .join('\n    UNION\n');
+            tagClauses.push(`  {\n${unionFilters}\n  }`);
+        }
+    }
+    return { tagClauses, tagPrefixes };
+};
+
 export default TagSelector;

@@ -129,4 +129,18 @@ const CategorySelector = ({
   );
 };
 
+// Returns SPARQL category filter block and prefixes
+export const getCategoryBlock = (selectedCategories, pushUnique) => {
+    let categoryClauses = [];
+    let categoryPrefixes = [];
+    if (selectedCategories.length) {
+        pushUnique(categoryPrefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
+        const unionFilters = selectedCategories
+            .map(cat => `    { ?img lsc:category "${cat.replace(/\"/g, '\\"')}" . }`)
+            .join('\n    UNION\n');
+        categoryClauses.push(`  {\n${unionFilters}\n  }`);
+    }
+    return { categoryClauses, categoryPrefixes };
+};
+
 export default CategorySelector;

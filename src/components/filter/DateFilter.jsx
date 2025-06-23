@@ -331,4 +331,55 @@ const DateFilter = ({ minDate, maxDate, startDate, endDate, setStartDate, setEnd
     );
 };
 
+// Returns SPARQL date filter block and prefixes
+export const getDateBlock = (includeStartDay, includeEndDay, startDay, endDay, selectedWeekdays, selectedYears, selectedMonths, pushUnique) => {
+    let dateClauses = [];
+    let datePrefixes = [];
+    if (
+        includeStartDay || includeEndDay ||
+        (selectedWeekdays && selectedWeekdays.length > 0) ||
+        (selectedYears && selectedYears.length > 0) ||
+        (selectedMonths && selectedMonths.length > 0)
+    ) {
+        pushUnique(datePrefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
+        pushUnique(datePrefixes, 'PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>');
+        if (selectedWeekdays && selectedWeekdays.length > 0) {
+            pushUnique(datePrefixes, 'PREFIX megras: <http://megras.org/sparql#>');
+        }
+        let dateBlock = [
+            '    ?img lsc:day ?day .',
+            '    BIND(xsd:date(STRAFTER(STR(?day), "#")) AS ?dayDate)'
+        ];
+        if (includeStartDay && includeEndDay) {
+            dateBlock.push(`    FILTER (?dayDate >= "${startDay}"^^xsd:date && ?dayDate <= "${endDay}"^^xsd:date)`);
+        } else if (includeStartDay) {
+            dateBlock.push(`    FILTER (?dayDate >= "${startDay}"^^xsd:date)`);
+        } else if (includeEndDay) {
+            dateBlock.push(`    FILTER (?dayDate <= "${endDay}"^^xsd:date)`);
+        }
+        if (selectedWeekdays && selectedWeekdays.length > 0) {
+            const weekdayMap = {
+                'Monday': 1,
+                'Tuesday': 2,
+                'Wednesday': 3,
+                'Thursday': 4,
+                'Friday': 5,
+                'Saturday': 6,
+                'Sunday': 7
+            };
+            const selectedNumbers = selectedWeekdays.map(day => weekdayMap[day]);
+            dateBlock.push(`    FILTER (megras:DAYOFWEEK(?dayDate) IN (${selectedNumbers.join(", ")}))`);
+        }
+        if (selectedYears && selectedYears.length > 0) {
+            const yearFilters = selectedYears.map(y => `YEAR(?dayDate) = ${y}`).join(' || ');
+            dateBlock.push(`    FILTER (${yearFilters})`);
+        }
+        if (selectedMonths && selectedMonths.length > 0) {
+            dateBlock.push(`    FILTER (MONTH(?dayDate) IN (${selectedMonths.join(", ")}))`);
+        }
+        dateClauses.push(`  {\n${dateBlock.join('\n')}\n  }`);
+    }
+    return { dateClauses, datePrefixes };
+};
+
 export default DateFilter;

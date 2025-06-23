@@ -102,4 +102,15 @@ const CitySelector = ({
     );
 };
 
+// Returns SPARQL city filter block and prefixes
+export const getCityBlock = (selectedCity, pushUnique) => {
+    let cityClauses = [];
+    let cityPrefixes = [];
+    if (selectedCity) {
+        pushUnique(cityPrefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
+        cityClauses.push(`  {\n    ?img lsc:city \"${selectedCity.replace(/\"/g, '\\"')}\" .\n  }`);
+    }
+    return { cityClauses, cityPrefixes };
+};
+
 export default CitySelector;

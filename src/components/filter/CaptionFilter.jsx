@@ -25,4 +25,16 @@ const CaptionFilter = ({ selectedCaption, setSelectedCaption, loading }) => (
   </div>
 );
 
+// Returns SPARQL caption filter block and prefixes
+export const getCaptionBlock = (selectedCaption, pushUnique) => {
+    let captionClauses = [];
+    let captionPrefixes = [];
+    if (selectedCaption) {
+        pushUnique(captionPrefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
+        // The triple: ?img lsc:caption ?caption .
+        captionClauses.push(`  { ?img lsc:caption ?caption . FILTER(CONTAINS(LCASE(STR(?caption)), LCASE(\"${selectedCaption.replace(/\"/g, '\\"')}\"))) }`);
+    }
+    return { captionClauses, captionPrefixes };
+};
+
 export default CaptionFilter;

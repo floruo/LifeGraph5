@@ -1,14 +1,33 @@
 import React from "react";
 
+// Helper to check if a time string is valid (HH:mm or HH:mm:ss)
+const isValidTime = (time) => /^\d{2}:\d{2}(:\d{2})?$/.test(time);
+const clampTime = (time, minTime, maxTime) => {
+    if (!isValidTime(time)) return minTime;
+    if (time < minTime) return minTime;
+    if (time > maxTime) return maxTime;
+    return time;
+};
+
+export const getTimeBlock = (includeStartTime, includeEndTime, startTime, endTime, pushUnique) => {
+    let timeClauses = [];
+    let timePrefixes = [];
+    if (includeStartTime || includeEndTime) {
+        pushUnique(timePrefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
+        let filter = [];
+        if (includeStartTime && includeEndTime) {
+            filter.push(`?time >= "${startTime.length === 5 ? startTime + ':00' : startTime}" && ?time <= "${endTime.length === 5 ? endTime + ':00' : endTime}"`);
+        } else if (includeStartTime) {
+            filter.push(`?time >= "${startTime.length === 5 ? startTime + ':00' : startTime}"`);
+        } else if (includeEndTime) {
+            filter.push(`?time <= "${endTime.length === 5 ? endTime + ':00' : endTime}"`);
+        }
+        timeClauses.push(`  {\n    ?img lsc:local_time ?datetime .\n    BIND(SUBSTR(STR(?datetime), 12, 8) AS ?time)\n    FILTER (${filter.join(' && ')})\n  }`);
+    }
+    return { timeClauses, timePrefixes };
+};
+
 const TimeFilter = ({ minTime, maxTime, startTime, endTime, setStartTime, setEndTime, includeStartTime = false, setIncludeStartTime = () => {}, includeEndTime = false, setIncludeEndTime = () => {}, label = "Time" }) => {
-    // Helper to check if a time string is valid (HH:mm or HH:mm:ss)
-    const isValidTime = (time) => /^\d{2}:\d{2}(:\d{2})?$/.test(time);
-    const clampTime = (time) => {
-        if (!isValidTime(time)) return minTime;
-        if (time < minTime) return minTime;
-        if (time > maxTime) return maxTime;
-        return time;
-    };
     const handleStartTimeChange = (e) => {
         const val = e.target.value;
         if (val >= minTime && val <= maxTime) {

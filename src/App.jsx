@@ -4,15 +4,17 @@ import React, { useState, useEffect } from 'react';
 import { FILTER_ORDER } from './config';
 import { executeSparqlQuery, fetchAllTags, fetchAllCountries, fetchDayRange, fetchAllCategories, fetchAllCities, fetchAllLocations } from './utils/sparql';
 
-import TagSelector from './components/selector/TagSelector.jsx';
-import CountrySelector from './components/selector/CountrySelector.jsx';
-import DateFilter from './components/filter/DateFilter.jsx';
-import CategorySelector from './components/selector/CategorySelector.jsx';
-import CitySelector from './components/selector/CitySelector.jsx';
-import TimeFilter from './components/filter/TimeFilter.jsx';
-import LocationSelector from './components/selector/LocationSelector.jsx';
-import CaptionFilter from './components/filter/CaptionFilter.jsx';
-import OcrFilter from './components/filter/OcrFilter.jsx';
+import TagSelector, { getTagBlock } from './components/selector/TagSelector.jsx';
+import CountrySelector, { getCountryBlock } from './components/selector/CountrySelector.jsx';
+import CategorySelector, { getCategoryBlock } from './components/selector/CategorySelector.jsx';
+import CitySelector, { getCityBlock } from './components/selector/CitySelector.jsx';
+import LocationSelector, { getLocationBlock } from './components/selector/LocationSelector.jsx';
+
+import DateFilter, { getDateBlock } from './components/filter/DateFilter.jsx';
+import TimeFilter, { getTimeBlock } from './components/filter/TimeFilter.jsx';
+import CaptionFilter, { getCaptionBlock } from './components/filter/CaptionFilter.jsx';
+import OcrFilter, { getOcrBlock } from './components/filter/OcrFilter.jsx';
+
 
 // Configurable filter order
 const filterOrder = FILTER_ORDER;
@@ -214,186 +216,11 @@ const App = () => {
     };
 
     // Helper function to push unique lines to an array
-    const pushUnique = (arr, line) => {
+    function pushUnique(arr, line) {
         if (!arr.includes(line)) {
             arr.push(line);
         }
-    };
-
-    // Tag filter block
-    const getTagBlock = () => {
-        let tagClauses = [];
-        let tagPrefixes = [];
-        if (selectedTags.length) {
-            pushUnique(tagPrefixes, 'PREFIX tag: <http://lsc.dcu.ie/tag#>');
-            pushUnique(tagPrefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
-            if (queryMode === 'intersection') {
-                tagClauses.push(`  {\n${selectedTags.map(tag => `    ?img lsc:tag tag:${tag.replace(/\"/g, '\\"')} . `).join('\n')}\n  }`);
-            } else {
-                const unionFilters = selectedTags
-                    .map(tag => `    { ?img lsc:tag tag:${tag.replace(/\"/g, '\\"')} . }`)
-                    .join('\n    UNION\n');
-                tagClauses.push(`  {\n${unionFilters}\n  }`);
-            }
-        }
-        return { tagClauses, tagPrefixes };
-    };
-
-    // Country filter block
-    const getCountryBlock = () => {
-        let countryClauses = [];
-        let countryPrefixes = [];
-        if (selectedCountry) {
-            pushUnique(countryPrefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
-            countryClauses.push(`  {\n    ?img lsc:country \"${selectedCountry.replace(/\"/g, '\\"')}\" .\n  }`);
-        }
-        return { countryClauses, countryPrefixes };
-    };
-
-    // City filter block
-    const getCityBlock = () => {
-        let cityClauses = [];
-        let cityPrefixes = [];
-        if (selectedCity) {
-            pushUnique(cityPrefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
-            cityClauses.push(`  {\n    ?img lsc:city \"${selectedCity.replace(/\"/g, '\\"')}\" .\n  }`);
-        }
-        return { cityClauses, cityPrefixes };
-    };
-
-    // Location filter block
-    const getLocationBlock = () => {
-        let locationClauses = [];
-        let locationPrefixes = [];
-        if (selectedLocation) {
-            pushUnique(locationPrefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
-            locationClauses.push(`  {\n    ?img lsc:location_name \"${selectedLocation.replace(/\"/g, '\\"')}\" .\n  }`);
-        }
-        return { locationClauses, locationPrefixes };
-    };
-
-    // Date, Year, Month, Weekday block
-    const getDateBlock = () => {
-        let dateClauses = [];
-        let datePrefixes = [];
-        if (
-            includeStartDay || includeEndDay ||
-            selectedWeekdays.length > 0 ||
-            selectedYears.length > 0 ||
-            selectedMonths.length > 0
-        ) {
-            pushUnique(datePrefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
-            pushUnique(datePrefixes, 'PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>');
-            if (selectedWeekdays.length > 0) {
-                pushUnique(datePrefixes, 'PREFIX megras: <http://megras.org/sparql#>');
-            }
-            let dateBlock = [
-                '    ?img lsc:day ?day .',
-                '    BIND(xsd:date(STRAFTER(STR(?day), "#")) AS ?dayDate)'
-            ];
-            // Date range
-            if (includeStartDay && includeEndDay) {
-                dateBlock.push(`    FILTER (?dayDate >= \"${startDay}\"^^xsd:date && ?dayDate <= \"${endDay}\"^^xsd:date)`);
-            } else if (includeStartDay) {
-                dateBlock.push(`    FILTER (?dayDate >= \"${startDay}\"^^xsd:date)`);
-            } else if (includeEndDay) {
-                dateBlock.push(`    FILTER (?dayDate <= \"${endDay}\"^^xsd:date)`);
-            }
-            // Weekday
-            if (selectedWeekdays.length > 0) {
-                const weekdayMap = {
-                    'Monday': 1,
-                    'Tuesday': 2,
-                    'Wednesday': 3,
-                    'Thursday': 4,
-                    'Friday': 5,
-                    'Saturday': 6,
-                    'Sunday': 7
-                };
-                const selectedNumbers = selectedWeekdays.map(day => weekdayMap[day]);
-                dateBlock.push(`    FILTER (megras:DAYOFWEEK(?dayDate) IN (${selectedNumbers.join(", ")}))`);
-            }
-            // Year
-            if (selectedYears.length > 0) {
-                const yearFilters = selectedYears.map(y => `YEAR(?dayDate) = ${y}`).join(' || ');
-                dateBlock.push(`    FILTER (${yearFilters})`);
-            }
-            // Month
-            if (selectedMonths.length > 0) {
-                dateBlock.push(`    FILTER (MONTH(?dayDate) IN (${selectedMonths.join(", ")}))`);
-            }
-            dateClauses.push(`  {\n${dateBlock.join('\n')}\n  }`);
-        }
-        return { dateClauses, datePrefixes };
-    };
-
-    // Time filter block
-    const getTimeBlock = () => {
-        let timeClauses = [];
-        let timePrefixes = [];
-        if (includeStartTime || includeEndTime) {
-            pushUnique(timePrefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
-            let filter = [];
-            // Extract time part from datetime string (format: 2019-07-09 07:47:08^^String)
-            // BIND(SUBSTR(STR(?datetime), 12, 8) AS ?time)
-            if (includeStartTime && includeEndTime) {
-                filter.push(`?time >= \"${startTime.length === 5 ? startTime + ':00' : startTime}\" && ?time <= \"${endTime.length === 5 ? endTime + ':00' : endTime}\"`);
-            } else if (includeStartTime) {
-                filter.push(`?time >= \"${startTime.length === 5 ? startTime + ':00' : startTime}\"`);
-            } else if (includeEndTime) {
-                filter.push(`?time <= \"${endTime.length === 5 ? endTime + ':00' : endTime}\"`);
-            }
-            timeClauses.push(`  {\n    ?img lsc:local_time ?datetime .\n    BIND(SUBSTR(STR(?datetime), 12, 8) AS ?time)\n    FILTER (${filter.join(' && ')})\n  }`);
-        }
-        return { timeClauses, timePrefixes };
-    };
-
-    // Category filter block
-    const getCategoryBlock = () => {
-        let categoryClauses = [];
-        let categoryPrefixes = [];
-        if (selectedCategories.length) {
-            pushUnique(categoryPrefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
-            // Always use union logic for categories (OR)
-            const unionFilters = selectedCategories
-                .map(cat => `    { ?img lsc:category \"${cat.replace(/\"/g, '\\"')}\" . }`)
-                .join('\n    UNION\n');
-            categoryClauses.push(`  {\n${unionFilters}\n  }`);
-        }
-        return { categoryClauses, categoryPrefixes };
-    };
-
-    // Caption filter block
-    const getCaptionBlock = () => {
-        let captionClauses = [];
-        let captionPrefixes = [];
-        if (selectedCaption) {
-            pushUnique(captionPrefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
-            // The triple: ?img lsc:caption ?caption .
-            // Filter: case-insensitive substring match
-            captionClauses.push(`  {\n    ?img lsc:caption ?caption .\n    FILTER(CONTAINS(LCASE(STR(?caption)), LCASE(\"${selectedCaption.replace(/"/g, '\\"')}\")))\n  }`);
-        }
-        return { captionClauses, captionPrefixes };
-    };
-
-    // OCR filter block
-    const getOcrBlock = () => {
-        let ocrClauses = [];
-        let ocrPrefixes = [];
-        if (selectedOcr) {
-            pushUnique(ocrPrefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
-            ocrClauses.push(`  {\n    ?img lsc:ocr ?ocr .\n    FILTER(CONTAINS(LCASE(STR(?ocr)), LCASE(\"${selectedOcr.replace(/\"/g, '\\\"')}\")))\n  }`);
-        }
-        return { ocrClauses, ocrPrefixes };
-    };
-
-    // KNN filter block
-    const getKnnBlock = () => {
-        if (knnActive && knnUri && knnValue > 0) {
-            return `  <${knnUri}> implicit:clip${knnValue}nn ?img .`;
-        }
-        return '';
-    };
+    }
 
     // Helper to render filter panels by type
     const renderFilterPanel = (type) => {
@@ -545,6 +372,14 @@ const App = () => {
         }
     };
 
+    // KNN filter block
+    const getKnnBlock = () => {
+        if (knnActive && knnUri && knnValue > 0) {
+            return `  <${knnUri}> implicit:clip${knnValue}nn ?img .`;
+        }
+        return '';
+    };
+
     // Main SPARQL query builder
     const getSparqlQuery = () => {
         if (
@@ -576,7 +411,7 @@ const App = () => {
             pushUnique(prefixes, 'PREFIX implicit: <http://megras.org/implicit/>');
             return [
                 ...prefixes,
-                '',
+                ' ',
                 'SELECT DISTINCT ?img ?id' + (groupByDay ? ' ?day' : ''),
                 'WHERE {',
                 '  ?img lsc:id ?id .',
@@ -592,39 +427,39 @@ const App = () => {
         }
         filterOrder.forEach(type => {
             if (type === 'tags') {
-                const { tagClauses, tagPrefixes } = getTagBlock();
+                const { tagClauses, tagPrefixes } = getTagBlock(selectedTags, queryMode, pushUnique);
                 whereClauses.push(...tagClauses);
                 tagPrefixes.forEach(p => pushUnique(prefixes, p));
             } else if (type === 'country') {
-                const { countryClauses, countryPrefixes } = getCountryBlock();
+                const { countryClauses, countryPrefixes } = getCountryBlock(selectedCountry, pushUnique);
                 whereClauses.push(...countryClauses);
                 countryPrefixes.forEach(p => pushUnique(prefixes, p));
             } else if (type === 'city') {
-                const { cityClauses, cityPrefixes } = getCityBlock();
+                const { cityClauses, cityPrefixes } = getCityBlock(selectedCity, pushUnique);
                 whereClauses.push(...cityClauses);
                 cityPrefixes.forEach(p => pushUnique(prefixes, p));
             } else if (type === 'location') {
-                const { locationClauses, locationPrefixes } = getLocationBlock();
+                const { locationClauses, locationPrefixes } = getLocationBlock(selectedLocation, pushUnique);
                 whereClauses.push(...locationClauses);
                 locationPrefixes.forEach(p => pushUnique(prefixes, p));
             } else if (type === 'date') {
-                const { dateClauses, datePrefixes } = getDateBlock();
+                const { dateClauses, datePrefixes } = getDateBlock(includeStartDay, includeEndDay, startDay, endDay, selectedWeekdays, selectedYears, selectedMonths, pushUnique);
                 whereClauses.push(...dateClauses);
                 datePrefixes.forEach(p => pushUnique(prefixes, p));
             } else if (type === 'time') {
-                const { timeClauses, timePrefixes } = getTimeBlock();
+                const { timeClauses, timePrefixes } = getTimeBlock(includeStartTime, includeEndTime, startTime, endTime, pushUnique);
                 whereClauses.push(...timeClauses);
                 timePrefixes.forEach(p => pushUnique(prefixes, p));
             } else if (type === 'category') {
-                const {categoryClauses, categoryPrefixes} = getCategoryBlock();
+                const {categoryClauses, categoryPrefixes} = getCategoryBlock(selectedCategories, pushUnique);
                 whereClauses.push(...categoryClauses);
                 categoryPrefixes.forEach(p => pushUnique(prefixes, p));
             } else if (type === 'caption') {
-                const { captionClauses, captionPrefixes } = getCaptionBlock();
+                const { captionClauses, captionPrefixes } = getCaptionBlock(selectedCaption, pushUnique);
                 whereClauses.push(...captionClauses);
                 captionPrefixes.forEach(p => pushUnique(prefixes, p));
             } else if (type === 'ocr') {
-                const { ocrClauses, ocrPrefixes } = getOcrBlock();
+                const { ocrClauses, ocrPrefixes } = getOcrBlock(selectedOcr, pushUnique);
                 whereClauses.push(...ocrClauses);
                 ocrPrefixes.forEach(p => pushUnique(prefixes, p));
             }
@@ -648,9 +483,6 @@ const App = () => {
             '}'
         ].join('\n');
     };
-
-    // useRef to prevent fetch on initial mount or reload
-    const didMount = React.useRef(false);
 
     // useEffect to clear filters on initial mount or reload
     useEffect(() => {
@@ -762,7 +594,6 @@ const App = () => {
     };
 
     const [collapseAllFilters, setCollapseAllFilters] = useState(false);
-    const [filtersCollapsed, setFiltersCollapsed] = useState(false);
 
     // Reset collapseAllFilters to false after triggering collapse
     useEffect(() => {

@@ -116,4 +116,15 @@ const CountrySelector = ({
     );
 };
 
+// Returns SPARQL country filter block and prefixes
+export const getCountryBlock = (selectedCountry, pushUnique) => {
+    let countryClauses = [];
+    let countryPrefixes = [];
+    if (selectedCountry) {
+        pushUnique(countryPrefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
+        countryClauses.push(`  {\n    ?img lsc:country \"${selectedCountry.replace(/\"/g, '\\"')}\" .\n  }`);
+    }
+    return { countryClauses, countryPrefixes };
+};
+
 export default CountrySelector;

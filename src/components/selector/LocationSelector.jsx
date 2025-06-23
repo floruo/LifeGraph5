@@ -97,5 +97,15 @@ const LocationSelector = ({
     );
 };
 
-export default LocationSelector;
+// Returns SPARQL location filter block and prefixes
+export const getLocationBlock = (selectedLocation, pushUnique) => {
+    let locationClauses = [];
+    let locationPrefixes = [];
+    if (selectedLocation) {
+        pushUnique(locationPrefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
+        locationClauses.push(`  {\n    ?img lsc:location_name \"${selectedLocation.replace(/\"/g, '\\"')}\" .\n  }`);
+    }
+    return { locationClauses, locationPrefixes };
+};
 
+export default LocationSelector;

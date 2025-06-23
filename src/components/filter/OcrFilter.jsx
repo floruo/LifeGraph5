@@ -1,5 +1,16 @@
 import React from 'react';
 
+// Returns SPARQL OCR filter block and prefixes
+export const getOcrBlock = (selectedOcr, pushUnique) => {
+    let ocrClauses = [];
+    let ocrPrefixes = [];
+    if (selectedOcr) {
+        pushUnique(ocrPrefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
+        ocrClauses.push(`  { ?img lsc:ocr ?ocr . FILTER(CONTAINS(LCASE(STR(?ocr)), LCASE(\"${selectedOcr.replace(/\"/g, '\\"')}\"))) }`);
+    }
+    return { ocrClauses, ocrPrefixes };
+};
+
 const OcrFilter = ({ selectedOcr, setSelectedOcr, loading }) => (
     <div className="w-full flex flex-col gap-2 mb-2">
         <div className="flex flex-row items-center gap-2">
@@ -26,4 +37,3 @@ const OcrFilter = ({ selectedOcr, setSelectedOcr, loading }) => (
 );
 
 export default OcrFilter;
-
