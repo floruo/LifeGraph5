@@ -89,26 +89,24 @@ export const DresSubmission = ({ submissionApi, dresSession, activeRun, imageId 
     };
 
     return (
-        <div className="flex flex-col gap-2">
-            <div className="flex gap-2">
-                <button
-                    className="px-2 py-1 bg-blue-500 text-white rounded shadow hover:bg-blue-600 transition disabled:bg-gray-400"
-                    onClick={handleSubmitImage}
-                    disabled={isSubmitting || !dresSession || !activeRun}
-                >
-                    {isSubmitting ? 'Submitting...' : 'Submit Image'}
-                </button>
-            </div>
+        <div className="flex flex-col gap-2 items-end">
+            <button
+                className="px-2 py-1 bg-blue-500 text-white rounded shadow hover:bg-blue-600 transition disabled:bg-gray-400 text-xs"
+                onClick={handleSubmitImage}
+                disabled={isSubmitting || !dresSession || !activeRun}
+            >
+                {isSubmitting ? 'Submitting...' : 'Submit Image'}
+            </button>
             <div className="flex gap-2">
                 <input
                     type="text"
                     value={text}
                     onChange={(e) => setText(e.target.value)}
-                    className="border rounded px-2 py-1 flex-grow"
+                    className="border rounded px-2 py-1 flex-grow text-xs"
                     placeholder="Enter text"
                 />
                 <button
-                    className="px-2 py-1 bg-blue-500 text-white rounded shadow hover:bg-blue-600 transition disabled:bg-gray-400"
+                    className="px-2 py-1 bg-blue-500 text-white rounded shadow hover:bg-blue-600 transition disabled:bg-gray-400 text-xs"
                     onClick={handleSubmitText}
                     disabled={isSubmitting || !dresSession || !activeRun}
                 >
