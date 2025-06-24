@@ -24,6 +24,9 @@ import LogViewer from './components/LogViewer.jsx';
 
 import { DresLogin, submitImage } from "./components/DresClient.jsx";
 
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
 import {ApiClient, EvaluationClientApi, LogApi, SubmissionApi, UserApi} from "./openapi/DRES/client/src/index.js";
 
 // Configurable filter order
@@ -521,10 +524,7 @@ const App = () => {
     // Handler for URI overlay
     const handleImageClick = (e, image) => {
         if (e.ctrlKey) {
-            submitImage(submissionApi, dresSession, activeRun, image.id,
-                (data) => console.log("Submission successful", data),
-                (error) => console.error("Submission failed", error)
-            );
+            submitImage(submissionApi, dresSession, activeRun, image.id);
         } else {
             setOverlayImageUrl(image.uri);
         }
@@ -626,213 +626,214 @@ const App = () => {
                 <h1 className="text-3xl font-bold text-gray-800 mb-6 text-center">
                     LifeGraph 5
                 </h1>
+                <ToastContainer />
                 <div className="flex flex-row items-start gap-8">
                     <div className="flex flex-col gap-6 max-w-xs w-full">
-                        <DresLogin
-                            userApi={userApi}
-                            dresSession={dresSession}
-                            setDresSession={setDresSession}
-                            runInfoApi={runInfoApi}
-                            activeRun={activeRun}
-                            setActiveRun={setActiveRun}
-                        />
-                        <div className="flex flex-row items-center justify-between">
-                            <button
-                                className="px-2 py-1 bg-gray-200 text-gray-700 rounded shadow hover:bg-gray-300 transition text-xs mr-auto"
-                                onClick={() => setCollapseAllFilters(true)}
-                                type="button"
-                            >
-                                Collapse All Filters
-                            </button>
-                            <button
-                                className="px-2 py-1 bg-red-100 text-red-700 rounded shadow hover:bg-red-200 transition text-xs ml-auto"
-                                onClick={handleClearFilters}
-                                disabled={loading}
-                                type="button"
-                            >
-                                Clear Filters
-                            </button>
-                        </div>
-                        {/* Left column: Filters (configurable order) */}
-                        <div className="flex flex-col gap-4">
-                            {filterOrder.map(type => (
-                                <React.Fragment key={type}>{renderFilterPanel(type, {
-                                    allTags,
-                                    loadingTags,
-                                    selectedTags,
-                                    setSelectedTags,
-                                    tagSearch,
-                                    setTagSearch,
-                                    forceFetchTags,
-                                    setForceFetchTags,
-                                    allCountries,
-                                    loadingCountries,
-                                    setLoadingCountries,
-                                    selectedCountry,
-                                    setSelectedCountry,
-                                    countrySearch,
-                                    setCountrySearch,
-                                    forceFetchCountries,
-                                    setForceFetchCountries,
-                                    allCities,
-                                    loadingCities,
-                                    setLoadingCities,
-                                    selectedCity,
-                                    setSelectedCity,
-                                    citySearch,
-                                    setCitySearch,
-                                    forceFetchCities,
-                                    setForceFetchCities,
-                                    allCategories,
-                                    loadingCategories,
-                                    selectedCategories,
-                                    setSelectedCategories,
-                                    forceFetchCategories,
-                                    setForceFetchCategories,
-                                    selectedLocation,
-                                    setSelectedLocation,
-                                    locationSearch,
-                                    setLocationSearch,
-                                    loadingLocations,
-                                    setLoadingLocations,
-                                    allLocations,
-                                    setAllLocations,
-                                    forceFetchLocations,
-                                    setForceFetchLocations,
-                                    minDate,
-                                    maxDate,
-                                    startDate,
-                                    endDate,
-                                    setStartDate,
-                                    setEndDate,
-                                    includeStartDay,
-                                    setIncludeStartDay,
-                                    includeEndDay,
-                                    setIncludeEndDay,
-                                    fetchDayRange,
-                                    forceFetchDayRange,
-                                    setForceFetchDayRange,
-                                    loadingDayRange,
-                                    rangeType,
-                                    setRangeType,
-                                    customDays,
-                                    setCustomDays,
-                                    selectedWeekdays,
-                                    setSelectedWeekdays,
-                                    weekdayRange,
-                                    setWeekdayRange,
-                                    selectedYears,
-                                    setSelectedYears,
-                                    selectedMonths,
-                                    setSelectedMonths,
-                                    groupByDay,
-                                    setGroupByDay,
-                                    minTime,
-                                    maxTime,
-                                    startTime,
-                                    endTime,
-                                    setStartTime,
-                                    setEndTime,
-                                    includeStartTime,
-                                    setIncludeStartTime,
-                                    includeEndTime,
-                                    setIncludeEndTime,
-                                    selectedCaption,
-                                    setSelectedCaption,
-                                    clipSimilarityText,
-                                    setClipSimilarityText,
-                                    clipSimilarityThreshold,
-                                    setClipSimilarityThreshold,
-                                    contextActive,
-                                    setContextActive,
-                                    contextUri,
-                                    setContextUri,
-                                    contextValue,
-                                    setContextValue,
-                                    selectedOcr,
-                                    setSelectedOcr,
-                                    queryMode,
-                                    setQueryMode,
-                                    loading,
-                                    collapseAllFilters
-                                })}</React.Fragment>
-                            ))}
-                        </div>
+                    <DresLogin
+                        userApi={userApi}
+                        dresSession={dresSession}
+                        setDresSession={setDresSession}
+                        runInfoApi={runInfoApi}
+                        activeRun={activeRun}
+                        setActiveRun={setActiveRun}
+                    />
+                    <div className="flex flex-row items-center justify-between">
+                        <button
+                            className="px-2 py-1 bg-gray-200 text-gray-700 rounded shadow hover:bg-gray-300 transition text-xs mr-auto"
+                            onClick={() => setCollapseAllFilters(true)}
+                            type="button"
+                        >
+                            Collapse All Filters
+                        </button>
+                        <button
+                            className="px-2 py-1 bg-red-100 text-red-700 rounded shadow hover:bg-red-200 transition text-xs ml-auto"
+                            onClick={handleClearFilters}
+                            disabled={loading}
+                            type="button"
+                        >
+                            Clear Filters
+                        </button>
                     </div>
-                    <div className="flex-1 min-w-0 flex flex-col items-center justify-start p-4 bg-gray-50 rounded-lg shadow-md">
-                        {/* Query area at the top */}
-                        <div className="w-full flex justify-center">
-                            <div className="w-1/2 flex flex-col items-center">
-                                <div className="flex flex-row items-center gap-2 w-full mb-2">
-                                    <button
-                                        onClick={handleSearchClick}
-                                        className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-md shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-150 ease-in-out w-full max-w-xs"
-                                        disabled={
-                                            loadingTags ||
-                                            loading ||
-                                            (
-                                                !getSparqlQuery()
-                                            )
-                                        }
-                                    >
-                                        {loadingTags ? "Loading ..." : "Query"}
-                                    </button>
-                                    <label className="flex items-center text-xs ml-2">
-                                        <input
-                                            type="checkbox"
-                                            checked={groupByDay}
-                                            onChange={handleGroupByDayChange}
-                                            className="mr-1"
-                                        />
-                                        Group by Day
-                                    </label>
-                                </div>
-                                {/* Collapsible SPARQL Query area */}
-                                <SparqlQueryArea
-                                    showSparql={showSparql}
-                                    setShowSparql={setShowSparql}
-                                    liveSparqlQuery={liveSparqlQuery}
-                                />
-                                <div className="w-full flex flex-row items-center justify-center gap-4 mb-2">
-                                    {imageUris.length > 0 && !loading && !error && (
-                                        <>
-                                            <span className="text-lg font-semibold text-gray-700">{imageUris.length} result{imageUris.length !== 1 ? 's' : ''} found</span>
-                                            <button
-                                                className="px-3 py-1 bg-red-100 text-red-700 rounded shadow hover:bg-red-200 transition text-xs"
-                                                onClick={handleClearResults}
-                                                disabled={loading}
-                                                type="button"
-                                            >
-                                                Clear Results
-                                            </button>
-                                        </>
-                                    )}
-                                </div>
-                                {queryTime !== null && !loading && !error && (
-                                    <div className="w-full mb-2 text-sm text-gray-500 text-center">
-                                        Query executed in {(queryTime / 1000).toFixed(1)}s
-                                    </div>
+                    {/* Left column: Filters (configurable order) */}
+                    <div className="flex flex-col gap-4">
+                        {filterOrder.map(type => (
+                            <React.Fragment key={type}>{renderFilterPanel(type, {
+                                allTags,
+                                loadingTags,
+                                selectedTags,
+                                setSelectedTags,
+                                tagSearch,
+                                setTagSearch,
+                                forceFetchTags,
+                                setForceFetchTags,
+                                allCountries,
+                                loadingCountries,
+                                setLoadingCountries,
+                                selectedCountry,
+                                setSelectedCountry,
+                                countrySearch,
+                                setCountrySearch,
+                                forceFetchCountries,
+                                setForceFetchCountries,
+                                allCities,
+                                loadingCities,
+                                setLoadingCities,
+                                selectedCity,
+                                setSelectedCity,
+                                citySearch,
+                                setCitySearch,
+                                forceFetchCities,
+                                setForceFetchCities,
+                                allCategories,
+                                loadingCategories,
+                                selectedCategories,
+                                setSelectedCategories,
+                                forceFetchCategories,
+                                setForceFetchCategories,
+                                selectedLocation,
+                                setSelectedLocation,
+                                locationSearch,
+                                setLocationSearch,
+                                loadingLocations,
+                                setLoadingLocations,
+                                allLocations,
+                                setAllLocations,
+                                forceFetchLocations,
+                                setForceFetchLocations,
+                                minDate,
+                                maxDate,
+                                startDate,
+                                endDate,
+                                setStartDate,
+                                setEndDate,
+                                includeStartDay,
+                                setIncludeStartDay,
+                                includeEndDay,
+                                setIncludeEndDay,
+                                fetchDayRange,
+                                forceFetchDayRange,
+                                setForceFetchDayRange,
+                                loadingDayRange,
+                                rangeType,
+                                setRangeType,
+                                customDays,
+                                setCustomDays,
+                                selectedWeekdays,
+                                setSelectedWeekdays,
+                                weekdayRange,
+                                setWeekdayRange,
+                                selectedYears,
+                                setSelectedYears,
+                                selectedMonths,
+                                setSelectedMonths,
+                                groupByDay,
+                                setGroupByDay,
+                                minTime,
+                                maxTime,
+                                startTime,
+                                endTime,
+                                setStartTime,
+                                setEndTime,
+                                includeStartTime,
+                                setIncludeStartTime,
+                                includeEndTime,
+                                setIncludeEndTime,
+                                selectedCaption,
+                                setSelectedCaption,
+                                clipSimilarityText,
+                                setClipSimilarityText,
+                                clipSimilarityThreshold,
+                                setClipSimilarityThreshold,
+                                contextActive,
+                                setContextActive,
+                                contextUri,
+                                setContextUri,
+                                contextValue,
+                                setContextValue,
+                                selectedOcr,
+                                setSelectedOcr,
+                                queryMode,
+                                setQueryMode,
+                                loading,
+                                collapseAllFilters
+                            })}</React.Fragment>
+                        ))}
+                    </div>
+                </div>
+                <div className="flex-1 min-w-0 flex flex-col items-center justify-start p-4 bg-gray-50 rounded-lg shadow-md">
+                    {/* Query area at the top */}
+                    <div className="w-full flex justify-center">
+                        <div className="w-1/2 flex flex-col items-center">
+                            <div className="flex flex-row items-center gap-2 w-full mb-2">
+                                <button
+                                    onClick={handleSearchClick}
+                                    className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-md shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-150 ease-in-out w-full max-w-xs"
+                                    disabled={
+                                        loadingTags ||
+                                        loading ||
+                                        (
+                                            !getSparqlQuery()
+                                        )
+                                    }
+                                >
+                                    {loadingTags ? "Loading ..." : "Query"}
+                                </button>
+                                <label className="flex items-center text-xs ml-2">
+                                    <input
+                                        type="checkbox"
+                                        checked={groupByDay}
+                                        onChange={handleGroupByDayChange}
+                                        className="mr-1"
+                                    />
+                                    Group by Day
+                                </label>
+                            </div>
+                            {/* Collapsible SPARQL Query area */}
+                            <SparqlQueryArea
+                                showSparql={showSparql}
+                                setShowSparql={setShowSparql}
+                                liveSparqlQuery={liveSparqlQuery}
+                            />
+                            <div className="w-full flex flex-row items-center justify-center gap-4 mb-2">
+                                {imageUris.length > 0 && !loading && !error && (
+                                    <>
+                                        <span className="text-lg font-semibold text-gray-700">{imageUris.length} result{imageUris.length !== 1 ? 's' : ''} found</span>
+                                        <button
+                                            className="px-3 py-1 bg-red-100 text-red-700 rounded shadow hover:bg-red-200 transition text-xs"
+                                            onClick={handleClearResults}
+                                            disabled={loading}
+                                            type="button"
+                                        >
+                                            Clear Results
+                                        </button>
+                                    </>
                                 )}
                             </div>
+                            {queryTime !== null && !loading && !error && (
+                                <div className="w-full mb-2 text-sm text-gray-500 text-center">
+                                    Query executed in {(queryTime / 1000).toFixed(1)}s
+                                </div>
+                            )}
                         </div>
-                        {/* Results area below */}
-                        <div className="w-full flex-1">
-                            <ResultDisplay
-                                imageUris={imageUris}
-                                loading={loading}
-                                error={error}
-                                groupByDay={groupByDay}
-                                handleImageClick={handleImageClick}
-                                submitImage={submitImage}
-                                triggerFetch={triggerFetch}
-                                selectedTags={selectedTags}
-                                overlayImageUrl={overlayImageUrl}
-                                configuredImagesPerRow={imagesPerRow}
-                            />
-                        </div>
+                    </div>
+                    {/* Results area below */}
+                    <div className="w-full flex-1">
+                        <ResultDisplay
+                            imageUris={imageUris}
+                            loading={loading}
+                            error={error}
+                            groupByDay={groupByDay}
+                            handleImageClick={handleImageClick}
+                            submitImage={submitImage}
+                            triggerFetch={triggerFetch}
+                            selectedTags={selectedTags}
+                            overlayImageUrl={overlayImageUrl}
+                            configuredImagesPerRow={imagesPerRow}
+                        />
                     </div>
                 </div>
             </div>
+        </div>
 
 
             {/* Image Overlay */}

@@ -1,8 +1,18 @@
 import React, { useState } from 'react';
 import { LoginRequest, ApiClientSubmission, ApiClientAnswerSet, ApiClientAnswer } from '../openapi/DRES/client/src/index';
 import { DRES_USER, DRES_PASSWORD } from '../config';
+import { toast } from "react-toastify";
 
-export const submitImage = (submissionApi, session, run, imageId, onSuccess, onError) => {
+const onSuccess = (data) => {
+    toast.success(`Submission successful: ${data.submission}`);
+};
+
+const onError = (error) => {
+    toast.error(`Submission failed!`);
+    console.log(error);
+};
+
+export const submitImage = (submissionApi, session, run, imageId) => {
     const answer = new ApiClientAnswer();
     answer.mediaItemName = imageId;
 
@@ -35,23 +45,8 @@ export const DresSubmission = ({ submissionApi, dresSession, activeRun, imageId 
             setSubmitError("No image selected to submit.");
             return;
         }
-        setIsSubmitting(true);
-        setSubmitError(null);
-        setSubmitSuccess(false);
 
-        const onSuccess = (data) => {
-            setIsSubmitting(false);
-            setSubmitSuccess(true);
-            console.log("Submission successful", data);
-        };
-
-        const onError = (error) => {
-            setIsSubmitting(false);
-            setSubmitError(error);
-            console.error("Submission failed", error);
-        };
-
-        submitImage(submissionApi, dresSession, activeRun, imageId, onSuccess, onError);
+        submitImage(submissionApi, dresSession, activeRun, imageId);
     };
 
     const handleSubmitText = () => {
@@ -61,18 +56,6 @@ export const DresSubmission = ({ submissionApi, dresSession, activeRun, imageId 
         const answerSet = new ApiClientAnswerSet([answer]);
 
         const submission = new ApiClientSubmission([answerSet]);
-
-        const onSuccess = (data) => {
-            setIsSubmitting(false);
-            setSubmitSuccess(true);
-            console.log("Submission successful", data);
-        };
-
-        const onError = (error) => {
-            setIsSubmitting(false);
-            setSubmitError(error);
-            console.error("Submission failed", error);
-        };
 
         submissionApi.postApiV2SubmitByEvaluationId(
             activeRun,
