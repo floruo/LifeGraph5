@@ -1,5 +1,5 @@
 import React from 'react';
-import { DresSubmitImage } from './DresClient';
+import { DresSubmission } from './DresClient';
 
 const ResultOverlay = ({
     overlayImageUrl,
@@ -152,7 +152,7 @@ const ResultOverlay = ({
 
                     {/* Right: DRES Submission */}
                     <div className="flex flex-row items-center justify-end gap-2" style={{ width: 320 }}>
-                        <DresSubmitImage
+                        <DresSubmission
                             submissionApi={submissionApi}
                             dresSession={dresSession}
                             activeRun={activeRun}

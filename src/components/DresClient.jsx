@@ -10,10 +10,6 @@ export const submitImage = (submissionApi, session, run, imageId, onSuccess, onE
 
     const submission = new ApiClientSubmission([answerSet]);
 
-    console.log("Submitting image:", imageId)
-    console.log("Submission object:", submission);
-    console.log("Run ID:", run);
-
     submissionApi.postApiV2SubmitByEvaluationId(
         run,
         submission,
@@ -28,12 +24,13 @@ export const submitImage = (submissionApi, session, run, imageId, onSuccess, onE
     )
 };
 
-export const DresSubmitImage = ({ submissionApi, dresSession, activeRun, imageId }) => {
+export const DresSubmission = ({ submissionApi, dresSession, activeRun, imageId }) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState(null);
     const [submitSuccess, setSubmitSuccess] = useState(false);
+    const [text, setText] = useState('');
 
-    const handleSubmit = () => {
+    const handleSubmitImage = () => {
         if (!imageId) {
             setSubmitError("No image selected to submit.");
             return;
@@ -57,15 +54,67 @@ export const DresSubmitImage = ({ submissionApi, dresSession, activeRun, imageId
         submitImage(submissionApi, dresSession, activeRun, imageId, onSuccess, onError);
     };
 
+    const handleSubmitText = () => {
+        const answer = new ApiClientAnswer();
+        answer.text = text;
+
+        const answerSet = new ApiClientAnswerSet([answer]);
+
+        const submission = new ApiClientSubmission([answerSet]);
+
+        const onSuccess = (data) => {
+            setIsSubmitting(false);
+            setSubmitSuccess(true);
+            console.log("Submission successful", data);
+        };
+
+        const onError = (error) => {
+            setIsSubmitting(false);
+            setSubmitError(error);
+            console.error("Submission failed", error);
+        };
+
+        submissionApi.postApiV2SubmitByEvaluationId(
+            activeRun,
+            submission,
+            { session: dresSession },
+            (error, data, response) => {
+                if (error) {
+                    onError(error.message);
+                } else {
+                    onSuccess(data);
+                }
+            }
+        )
+    };
+
     return (
         <div className="flex flex-col gap-2">
-            <button
-                className="px-2 py-1 bg-blue-500 text-white rounded shadow hover:bg-blue-600 transition disabled:bg-gray-400"
-                onClick={handleSubmit}
-                disabled={isSubmitting || !dresSession || !activeRun}
-            >
-                {isSubmitting ? 'Submitting...' : 'Submit Image'}
-            </button>
+            <div className="flex gap-2">
+                <button
+                    className="px-2 py-1 bg-blue-500 text-white rounded shadow hover:bg-blue-600 transition disabled:bg-gray-400"
+                    onClick={handleSubmitImage}
+                    disabled={isSubmitting || !dresSession || !activeRun}
+                >
+                    {isSubmitting ? 'Submitting...' : 'Submit Image'}
+                </button>
+            </div>
+            <div className="flex gap-2">
+                <input
+                    type="text"
+                    value={text}
+                    onChange={(e) => setText(e.target.value)}
+                    className="border rounded px-2 py-1 flex-grow"
+                    placeholder="Enter text"
+                />
+                <button
+                    className="px-2 py-1 bg-blue-500 text-white rounded shadow hover:bg-blue-600 transition disabled:bg-gray-400"
+                    onClick={handleSubmitText}
+                    disabled={isSubmitting || !dresSession || !activeRun}
+                >
+                    {isSubmitting ? 'Submitting...' : 'Submit Text'}
+                </button>
+            </div>
             {submitError && <p className="text-red-500 text-xs">{submitError}</p>}
             {submitSuccess && <p className="text-green-500 text-xs">Submission successful!</p>}
         </div>
