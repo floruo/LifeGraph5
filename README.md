@@ -4,12 +4,11 @@ A React-based frontend for exploring and querying lifelog image data using tags 
 
 ## Features
 
-- **Tag and Country Search:** Select tags and countries to filter image URIs.
-- **AND/OR Query Mode:** Combine tags using intersection (AND) or union (OR).
-- **SPARQL Query Display:** View the generated SPARQL query.
-- **Result Overlay:** Click on a URI to view it in an overlay.
-- **Caching:** Tags and countries are cached in localStorage for faster access.
-- **Tailwind CSS:** Modern, responsive UI with Inter font.
+- Query a configurable SPARQL endpoint
+- Filter results by tags, country, city, category, location, date, time, caption, clip, and OCR
+- Interactive UI for building and running SPARQL queries
+- Responsive design using Tailwind CSS
+- Modular component structure for easy customization
 
 ## IMPORTANT: Changes Made to the LSC23 Data
 
@@ -27,7 +26,7 @@ A React-based frontend for exploring and querying lifelog image data using tags 
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/your-username/LSC25.git
+   git clone https://github.com/floruo/LSC25.git
    cd LSC25
    ```
 
@@ -38,7 +37,7 @@ A React-based frontend for exploring and querying lifelog image data using tags 
 
 3. **Configure SPARQL Endpoint:**
    - By default, the app queries `http://localhost:8080/query/sparql`.
-   - To change, edit `src/utils/sparql.js` and update `sparqlEndpointUrl`.
+   - To change, edit `SPARQL_ENDPOINT` in `src/config.js`.
 
 4. **Start the development server:**
    ```bash
@@ -52,17 +51,32 @@ A React-based frontend for exploring and querying lifelog image data using tags 
 
 ```
 src/
-  App.jsx                # Main app component
+  App.jsx      # Main app component
+  config.js    # App configuration
+  index.css    # Tailwind CSS imports
+  main.jsx     # Entry point
   components/
-    TagSelector.jsx      # Tag selection UI
-    CountrySelector.jsx  # Country selection UI
+    RenderFilters.jsx    # Renders all filter components
+    ResultDisplay.jsx    # Displays query results
+    ResultOverlay.jsx    # Overlay for results
+    SparqlQueryArea.jsx  # SPARQL query editor and runner
+    filter/
+      CaptionFilter.jsx  # Filter by caption
+      ClipFilter.jsx     # Filter by clip
+      DateFilter.jsx     # Filter by date
+      OcrFilter.jsx      # Filter by OCR
+      TimeFilter.jsx     # Filter by time
+    selector/
+      CategorySelector.jsx # Select category
+      CitySelector.jsx     # Select city
+      CountrySelector.jsx  # Select country
+      LocationSelector.jsx # Select location
+      TagSelector.jsx      # Select tags
   utils/
-    sparql.js            # SPARQL query utilities
-  main.jsx               # Entry point
-  index.css              # Tailwind CSS imports
-index.html               # HTML template
-vite.config.js           # Vite config
-package.json             # Project metadata and scripts
+  sparql.js       # SPARQL query utilities
+  index.html      # HTML template
+  vite.config.js  # Vite config
+  package.json    # Project metadata and scripts
 ```
 
 ## Scripts
@@ -74,10 +88,11 @@ package.json             # Project metadata and scripts
 
 ## Customization
 
+- **Filter Order:** Modify the order of filters in `src/config.js` and update `FILTER_ORDER`.
 - **Styling:** Uses Tailwind CSS and Inter font (see `index.html` and `index.css`).
-- **SPARQL Queries:** Modify or extend queries in `src/utils/sparql.js` as needed.
+- **SPARQL Queries:** Modify or extend queries as needed.
+- **Filters & Selectors:** Add or customize filter/selector components in `src/components/filter/` and `src/components/selector/`.
 
 ## License
 
 MIT
-
