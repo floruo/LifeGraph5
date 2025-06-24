@@ -18,16 +18,38 @@ export const DresLogin = ({ userApi, dresSession, setDresSession }) => {
         });
     };
 
+    const handleLogout = () => {
+        userApi.getApiV2Logout({
+            sessionId: dresSession
+        }, (error, data, response) => {
+            if (error) {
+                setError(error.message);
+            } else {
+                setError(null);
+                setDresSession('');
+            }
+        });
+    };
+
     return (
-        (!dresSession) &&
         <div className="flex flex-col gap-6 max-w-xs w-full">
             {error && <p style={{ color: 'red' }}>{error}</p>}
-            <button
-                className="px-2 py-1 bg-green-100 text-green-700 rounded shadow hover:bg-green-200 transition text-xs ml-auto"
-                onClick={handleLogin}
-            >
-                DRES LOGIN
-            </button>
+            {dresSession ? (
+                <button
+                    className="px-2 py-1 bg-red-100 text-red-700 rounded shadow hover:bg-red-200 transition text-xs ml-auto"
+                    onClick={handleLogout}
+                >
+                    DRES LOGOUT
+                </button>
+            ) : (
+            /*    <button
+                    className="px-2 py-1 bg-green-100 text-green-700 rounded shadow hover:bg-green-200 transition text-xs ml-auto"
+                    onClick={handleLogin}
+                >
+                    DRES LOGIN
+                </button>*/
+                <p style={{ color: 'green' }}>Logged in as {DRES_USER}</p>
+            )}
         </div>
     );
 };
