@@ -7,6 +7,7 @@ const ResultDisplay = ({
   error,
   groupByDay,
   handleImageClick,
+  submitImage,
   triggerFetch,
   selectedTags,
   overlayImageUrl,
@@ -31,7 +32,7 @@ const ResultDisplay = ({
       if (!groups[year]) groups[year] = {};
       if (!groups[year][month]) groups[year][month] = {};
       if (!groups[year][month][dateStr]) groups[year][month][dateStr] = [];
-      groups[year][month][dateStr].push(obj.uri);
+      groups[year][month][dateStr].push(obj);
     });
     return groups;
   }
@@ -106,18 +107,18 @@ const ResultDisplay = ({
               if (days.length > 1) {
                 return days.map(day => (
                   <CollapsiblePanel key={day} title={day} defaultOpen={false} className="w-full !max-w-none">
-                    <div className="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-${imagesPerRow gap-4">
-                      {daysObj[day].map((uri, index) => (
+                    <div className={`w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-${imagesPerRow} gap-4`}>
+                      {daysObj[day].map((obj, index) => (
                         <div
                           key={index}
                           className="bg-gray-100 p-2 rounded-lg shadow flex justify-center items-center overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-200"
-                          onClick={() => handleImageClick(uri)}
+                          onClick={(e) => handleImageClick(e, obj)}
                         >
                           <img
-                            src={uri + "/preview"}
+                            src={obj.uri + "/preview"}
                             alt="Preview"
                             className="max-h-32 max-w-full object-contain rounded shadow cursor-pointer hover:scale-105 transition-transform duration-200"
-                            onClick={e => { e.stopPropagation(); handleImageClick(uri); }}
+                            onClick={e => { e.stopPropagation(); handleImageClick(e, obj); }}
                           />
                         </div>
                       ))}
@@ -126,18 +127,18 @@ const ResultDisplay = ({
                 ));
               } else if (days.length === 1) {
                 return (
-                  <div className="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-${imagesPerRow gap-4">
-                    {daysObj[days[0]].map((uri, index) => (
+                  <div className={`w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-${imagesPerRow} gap-4`}>
+                    {daysObj[days[0]].map((obj, index) => (
                       <div
                         key={index}
                         className="bg-gray-100 p-2 rounded-lg shadow flex justify-center items-center overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-200"
-                        onClick={() => handleImageClick(uri)}
+                        onClick={(e) => handleImageClick(e, obj)}
                       >
                         <img
-                          src={uri + "/preview"}
+                          src={obj.uri + "/preview"}
                           alt="Preview"
                           className="max-h-32 max-w-full object-contain rounded shadow cursor-pointer hover:scale-105 transition-transform duration-200"
-                          onClick={e => { e.stopPropagation(); handleImageClick(uri); }}
+                          onClick={e => { e.stopPropagation(); handleImageClick(e, obj); }}
                         />
                       </div>
                     ))}
@@ -190,13 +191,13 @@ const ResultDisplay = ({
               <div
                 key={index}
                 className="bg-gray-100 p-2 rounded-lg shadow flex justify-center items-center overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-200"
-                onClick={() => handleImageClick(obj.uri)}
+                onClick={(e) => handleImageClick(e, obj)}
               >
                 <img
                   src={obj.uri + "/preview"}
                   alt="Preview"
                   className="max-h-32 max-w-full object-contain rounded shadow cursor-pointer hover:scale-105 transition-transform duration-200"
-                  onClick={e => { e.stopPropagation(); handleImageClick(obj.uri); }}
+                  onClick={e => { e.stopPropagation(); handleImageClick(e, obj); }}
                 />
               </div>
             ))}

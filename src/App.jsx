@@ -22,7 +22,7 @@ import SparqlQueryArea from "./components/SparqlQueryArea";
 import ResultDisplay from './components/ResultDisplay.jsx';
 import LogViewer from './components/LogViewer.jsx';
 
-import { DresLogin } from "./components/DresClient.jsx";
+import { DresLogin, submitImage } from "./components/DresClient.jsx";
 
 import {ApiClient, EvaluationClientApi, LogApi, SubmissionApi, UserApi} from "./openapi/DRES/client/src/index.js";
 
@@ -519,8 +519,15 @@ const App = () => {
     }, [forceFetchLocations]);
 
     // Handler for URI overlay
-    const handleImageClick = (originalUri) => {
-        setOverlayImageUrl(originalUri);
+    const handleImageClick = (e, image) => {
+        if (e.ctrlKey) {
+            submitImage(submissionApi, dresSession, activeRun, image.id,
+                (data) => console.log("Submission successful", data),
+                (error) => console.error("Submission failed", error)
+            );
+        } else {
+            setOverlayImageUrl(image.uri);
+        }
     };
 
     // Handler for closing the overlay
@@ -816,6 +823,7 @@ const App = () => {
                                 error={error}
                                 groupByDay={groupByDay}
                                 handleImageClick={handleImageClick}
+                                submitImage={submitImage}
                                 triggerFetch={triggerFetch}
                                 selectedTags={selectedTags}
                                 overlayImageUrl={overlayImageUrl}
