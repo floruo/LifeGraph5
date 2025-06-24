@@ -23,7 +23,7 @@ import ResultDisplay from './components/ResultDisplay.jsx';
 import LogViewer from './components/LogViewer.jsx';
 import { DresLogin } from "./components/DresClient.jsx";
 
-import {ApiClient, EvaluationApi, LogApi, SubmissionApi, UserApi} from "./openapi/DRES/client/src/index.js";
+import {ApiClient, EvaluationClientApi, LogApi, SubmissionApi, UserApi} from "./openapi/DRES/client/src/index.js";
 
 
 // Configurable filter order
@@ -37,7 +37,7 @@ const App = () => {
     const [dresSession, setDresSession] = useState('');
     const client = new ApiClient(DRES_API_ENDPOINT);
     const userApi = new UserApi(client);
-    const runInfoApi = new EvaluationApi(client);
+    const runInfoApi = new EvaluationClientApi(client);
     const submissionApi = new SubmissionApi(client);
     const logApi = new LogApi(client);
 
@@ -843,6 +843,9 @@ const App = () => {
                 setContextUri={setContextUri}
                 contextValue={contextValue}
                 setContextValue={setContextValue}
+                submissionApi={submissionApi}
+                runInfoApi={runInfoApi}
+                dresSession={dresSession}
             />
             {showLogs ? (
                 <LogViewer logs={logs} onClear={handleClearLogs} onClose={() => setShowLogs(false)} />

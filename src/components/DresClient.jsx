@@ -35,21 +35,23 @@ export const DresLogin = ({ userApi, dresSession, setDresSession }) => {
         <div className="flex flex-col gap-6 max-w-xs w-full">
             {error && <p style={{ color: 'red' }}>{error}</p>}
             {dresSession ? (
-                <button
+                /*<button
                     className="px-2 py-1 bg-red-100 text-red-700 rounded shadow hover:bg-red-200 transition text-xs ml-auto"
                     onClick={handleLogout}
                 >
                     DRES LOGOUT
-                </button>
+                </button>*/
+                <p style={{ color: 'green' }}>Logged in as {DRES_USER}</p>
             ) : (
-            /*    <button
+                <button
                     className="px-2 py-1 bg-green-100 text-green-700 rounded shadow hover:bg-green-200 transition text-xs ml-auto"
                     onClick={handleLogin}
                 >
                     DRES LOGIN
-                </button>*/
-                <p style={{ color: 'green' }}>Logged in as {DRES_USER}</p>
+                </button>
             )}
         </div>
     );
 };
+
+
