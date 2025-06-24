@@ -14,7 +14,11 @@ const ResultOverlay = ({
     setNearDuplicateUri,
     showPrevImage,
     showNextImage,
-    currentIndex
+    currentIndex,
+    setContextActive,
+    setContextUri,
+    contextValue,
+    setContextValue,
 }) => {
     if (!overlayImageUrl) return null;
     const currentObj = imageUris.find(obj => obj.uri === overlayImageUrl);
@@ -80,18 +84,43 @@ const ResultOverlay = ({
                                 </label>
                             </div>
                         </div>
-                        <button
-                            className="ml-4 px-3 py-1 rounded bg-purple-600 text-white text-xs font-semibold shadow hover:bg-purple-700 transition"
-                            style={{ minWidth: 0, height: 36 }}
-                            onClick={() => {
-                                setNearDuplicateActive(true);
-                                setNearDuplicateUri(overlayImageUrl);
-                                handleCloseOverlay();
-                            }}
-                            title="Show near duplicates for this image"
-                        >
-                            Near Duplicate
-                        </button>
+                        <div className="flex flex-col items-stretch gap-2" style={{ minWidth: 0 }}>
+                            <button
+                                className="ml-4 px-3 py-1 rounded bg-purple-600 text-white text-xs font-semibold shadow hover:bg-purple-700 transition"
+                                style={{ minWidth: 0,  }}
+                                onClick={() => {
+                                    setNearDuplicateActive(true);
+                                    setNearDuplicateUri(overlayImageUrl);
+                                    handleCloseOverlay();
+                                }}
+                                title="Show near duplicates for this image"
+                            >
+                                Near Duplicates
+                            </button>
+                            <div className="flex flex-row items-center gap-2 mt-1 w-full">
+                                <button
+                                    className="ml-4 px-3 py-1 rounded bg-orange-600 text-white text-xs font-semibold shadow hover:bg-orange-700 transition"
+                                    style={{ minWidth: 0,  }}
+                                    onClick={() => {
+                                        setContextActive(true);
+                                        setContextUri(overlayImageUrl);
+                                        handleCloseOverlay();
+                                    }}
+                                    title="Show context for this image"
+                                >
+                                    Context
+                                </button>
+                                <input
+                                    type="number"
+                                    min={1}
+                                    max={500}
+                                    value={contextValue}
+                                    onChange={e => setContextValue(Math.max(1, Math.min(500, parseInt(e.target.value)) || 1))}
+                                    className="w-16 px-2 py-1 border rounded text-sm"
+                                    title="n"
+                                />
+                            </div>
+                        </div>
                     </div>
                     {/* Center: Navigation buttons */}
                     <div className="flex items-center justify-center">

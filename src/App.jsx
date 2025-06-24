@@ -147,13 +147,18 @@ const App = () => {
     const [knnUri, setKnnUri] = useState(null);
     const [knnReplaceMode, setKnnReplaceMode] = useState(true);
 
-    // State for KNN filter
+    // State for near duplicate filter
     const [nearDuplicateActive, setNearDuplicateActive] = useState(false);
     const [nearDuplicateUri, setNearDuplicateUri] = useState(null);
 
+    // State for context filter
+    const [contextActive, setContextActive] = useState(false);
+    const [contextUri, setContextUri] = useState(null);
+    const [contextValue, setContextValue] = useState(10);
+
     // Effect: When nearDuplicateActive is set to true, clear all other filters
     useEffect(() => {
-        if (nearDuplicateActive) {
+        if (nearDuplicateActive || contextActive) {
             setSelectedTags([]);
             setSelectedCountry('');
             setTagSearch('');
@@ -183,18 +188,24 @@ const App = () => {
             setClipSimilarityText('');
             setSelectedOcr('');
             setKnnActive(false);
+            if (nearDuplicateActive) {
+                setContextActive(false);
+            }
+            if (contextActive) {
+                setNearDuplicateActive(false);
+            }
             //setTriggerFetch(0);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [nearDuplicateActive]);
+    }, [nearDuplicateActive, contextActive]);
 
     // Store the latest SPARQL query for live display
     const [liveSparqlQuery, setLiveSparqlQuery] = useState('');
 
-    // Update the live SPARQL query whenever filters or groupByDay change
+    // Update the live SPARQL query
     useEffect(() => {
         setLiveSparqlQuery(getSparqlQuery());
-    }, [selectedTags, selectedCountry, selectedCity, selectedLocation, includeStartDay, includeEndDay, startDate, endDate, selectedWeekdays, selectedYears, queryMode, selectedMonths, selectedCategories, groupByDay, includeStartTime, includeEndTime, startTime, endTime, selectedCaption, clipSimilarityText, clipSimilarityThreshold, selectedOcr, knnActive, nearDuplicateActive]);
+    }, [selectedTags, selectedCountry, selectedCity, selectedLocation, includeStartDay, includeEndDay, startDate, endDate, selectedWeekdays, selectedYears, queryMode, selectedMonths, selectedCategories, groupByDay, includeStartTime, includeEndTime, startTime, endTime, selectedCaption, clipSimilarityText, clipSimilarityThreshold, selectedOcr, knnActive, nearDuplicateActive, contextActive]);
 
     // Fetch min/max day from SPARQL endpoint on mount or when forceFetchDayRange changes
     useEffect(() => {
@@ -276,6 +287,22 @@ const App = () => {
         return '';
     };
 
+    // context filter block
+    const getContextBlock = () => {
+        if (contextActive && contextUri) {
+            return [
+                '  {',
+                `    <${contextUri}> lsc:ordinal ?ordinal .`,
+                '    ?img lsc:ordinal ?ord .',
+                `    BIND (${contextValue} AS ?n)`,
+                ' ',
+                '    FILTER ((?ord >= (?ordinal - ?n)) && (?ord <= (?ordinal + ?n)))',
+                '  }'
+            ].filter(Boolean).join('\n');
+        }
+        return '';
+    };
+
     // Main SPARQL query builder
     const getSparqlQuery = () => {
         if (
@@ -295,7 +322,8 @@ const App = () => {
             !selectedOcr &&
             !knnActive &&
             !nearDuplicateActive &&
-            !clipSimilarityText
+            !clipSimilarityText &&
+            !contextActive
         ) {
             return '';
         }
@@ -324,6 +352,13 @@ const App = () => {
                 whereClauses.push(nearDuplicateBlock);
                 pushUnique(prefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
                 pushUnique(prefixes, 'PREFIX implicit: <http://megras.org/implicit/>');
+            }
+        }
+        if (contextActive && contextUri) {
+            const contextBlock = getContextBlock();
+            if (contextBlock) {
+                whereClauses.push(contextBlock);
+                pushUnique(prefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
             }
         }
         if (knnBlock) {
@@ -502,6 +537,7 @@ const App = () => {
         setSelectedOcr('');
         setKnnActive(false);
         setNearDuplicateActive(false);
+        setContextActive(false)
         //setTriggerFetch(0);
     };
 
@@ -651,6 +687,12 @@ const App = () => {
                                     setClipSimilarityText,
                                     clipSimilarityThreshold,
                                     setClipSimilarityThreshold,
+                                    contextActive,
+                                    setContextActive,
+                                    contextUri,
+                                    setContextUri,
+                                    contextValue,
+                                    setContextValue,
                                     selectedOcr,
                                     setSelectedOcr,
                                     queryMode,
@@ -752,6 +794,10 @@ const App = () => {
                 showPrevImage={showPrevImage}
                 showNextImage={showNextImage}
                 currentIndex={currentIndex}
+                setContextActive={setContextActive}
+                setContextUri={setContextUri}
+                contextValue={contextValue}
+                setContextValue={setContextValue}
             />
         </div>
     );
