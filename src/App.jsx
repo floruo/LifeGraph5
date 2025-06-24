@@ -37,8 +37,24 @@ const App = () => {
     const [triggerFetch, setTriggerFetch] = useState(0);
     const [allTags, setAllTags] = useState([]);
     const [loadingTags, setLoadingTags] = useState(true);
-    const [logs, setLogs] = useState([]);
+    const [logs, setLogs] = useState(() => {
+        try {
+            const savedLogs = localStorage.getItem('sparql-logs');
+            return savedLogs ? JSON.parse(savedLogs) : [];
+        } catch (error) {
+            console.error('Failed to load logs from local storage', error);
+            return [];
+        }
+    });
     const [showLogs, setShowLogs] = useState(false);
+
+    useEffect(() => {
+        try {
+            localStorage.setItem('sparql-logs', JSON.stringify(logs));
+        } catch (error) {
+            console.error('Failed to save logs to local storage', error);
+        }
+    }, [logs]);
 
     const addLogEntry = (logEntry) => {
         setLogs(prevLogs => [...prevLogs, { id: prevLogs.length, ...logEntry }]);
