@@ -1,7 +1,7 @@
 // App.jsx
 import React, { useState, useEffect } from 'react';
 
-import { FILTER_ORDER, RESULTS_PER_ROW } from './config';
+import {DRES_API_ENDPOINT, FILTER_ORDER, RESULTS_PER_ROW} from './config';
 import { executeSparqlQuery, fetchAllTags, fetchAllCountries, fetchDayRange, fetchAllCategories, fetchAllCities, fetchAllLocations } from './utils/sparql';
 
 import { getTagBlock } from './components/selector/TagSelector.jsx';
@@ -21,6 +21,9 @@ import ResultOverlay from './components/ResultOverlay.jsx';
 import SparqlQueryArea from "./components/SparqlQueryArea";
 import ResultDisplay from './components/ResultDisplay.jsx';
 import LogViewer from './components/LogViewer.jsx';
+import { DresLogin } from "./components/DresClient.jsx";
+
+import {ApiClient, EvaluationApi, LogApi, SubmissionApi, UserApi} from "./openapi/DRES/client/src/index.js";
 
 
 // Configurable filter order
@@ -30,6 +33,14 @@ const imagesPerRow = RESULTS_PER_ROW;
 
 // Main App component
 const App = () => {
+    // DRES login state
+    const [dresSession, setDresSession] = useState('');
+    const client = new ApiClient(DRES_API_ENDPOINT);
+    const userApi = new UserApi(client);
+    const runInfoApi = new EvaluationApi(client);
+    const submissionApi = new SubmissionApi(client);
+    const logApi = new LogApi(client);
+
     // State to store URIs
     const [imageUris, setImageUris] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -609,6 +620,11 @@ const App = () => {
                 </h1>
                 <div className="flex flex-row items-start gap-8">
                     <div className="flex flex-col gap-6 max-w-xs w-full">
+                        <DresLogin
+                            userApi={userApi}
+                            dresSession={dresSession}
+                            setDresSession={setDresSession}
+                        />
                         <div className="flex flex-row items-center justify-between">
                             <button
                                 className="px-2 py-1 bg-gray-200 text-gray-700 rounded shadow hover:bg-gray-300 transition text-xs mr-auto"
@@ -843,3 +859,4 @@ const App = () => {
 };
 
 export default App;
+
