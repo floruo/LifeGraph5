@@ -92,6 +92,13 @@ src/
 - **Styling:** Uses Tailwind CSS and Inter font (see `index.html` and `index.css`).
 - **SPARQL Queries:** Modify or extend queries as needed.
 - **Filters & Selectors:** Add or customize filter/selector components in `src/components/filter/` and `src/components/selector/`.
+- **DRES Configuration:** Create a `config.local.json` in `src` and add the user and password in the following format:
+   ```json
+   {
+      "DRES_USER": "MyUserName",
+      "DRES_PASSWORD": "MyPassword"
+   }
+   ```
 
 ## License
 

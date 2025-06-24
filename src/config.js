@@ -3,6 +3,21 @@
 // SPARQL endpoint URL
 export const SPARQL_ENDPOINT = "http://localhost:8080/query/sparql";
 
+// DRES API endpoint
+export const DRES_API_ENDPOINT = "http://localhost:8080/api/v2";
+let DRES_USER = "MyUserName";
+let DRES_PASSWORD = "MyPassword";
+try {
+    const config = require("./config.local.json");
+    DRES_USER = config.DRES_USER;
+    DRES_PASSWORD = config.DRES_PASSWORD;
+} catch (e) {
+    console.warn("config.local.json not found or invalid. Using empty credentials.");
+}
+
+export { DRES_USER, DRES_PASSWORD };
+
+
 // Configurable filter order for collapsibles
 export const FILTER_ORDER = [
     'tags',
