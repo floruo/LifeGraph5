@@ -1,7 +1,7 @@
 // App.jsx
 import React, { useState, useEffect } from 'react';
 
-import {DRES_API_ENDPOINT, FILTER_ORDER, RESULTS_PER_ROW} from './config';
+import { DRES_API_ENDPOINT, FILTER_ORDER, RESULTS_PER_ROW } from './config';
 import { executeSparqlQuery, fetchAllTags, fetchAllCountries, fetchDayRange, fetchAllCategories, fetchAllCities, fetchAllLocations } from './utils/sparql';
 
 import { getTagBlock } from './components/selector/TagSelector.jsx';
@@ -21,10 +21,10 @@ import ResultOverlay from './components/ResultOverlay.jsx';
 import SparqlQueryArea from "./components/SparqlQueryArea";
 import ResultDisplay from './components/ResultDisplay.jsx';
 import LogViewer from './components/LogViewer.jsx';
+
 import { DresLogin } from "./components/DresClient.jsx";
 
 import {ApiClient, EvaluationClientApi, LogApi, SubmissionApi, UserApi} from "./openapi/DRES/client/src/index.js";
-
 
 // Configurable filter order
 const filterOrder = FILTER_ORDER;

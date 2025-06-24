@@ -53,5 +53,3 @@ export const DresLogin = ({ userApi, dresSession, setDresSession }) => {
         </div>
     );
 };
-
-
