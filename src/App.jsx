@@ -848,8 +848,8 @@ const App = () => {
                 contextValue={contextValue}
                 setContextValue={setContextValue}
                 submissionApi={submissionApi}
-                runInfoApi={runInfoApi}
                 dresSession={dresSession}
+                activeRun={activeRun}
             />
             {showLogs ? (
                 <LogViewer logs={logs} onClear={handleClearLogs} onClose={() => setShowLogs(false)} />

@@ -1,6 +1,76 @@
 import React, { useState } from 'react';
-import { LoginRequest } from '../openapi/DRES/client/src/index';
+import { LoginRequest, ApiClientSubmission, ApiClientAnswerSet, ApiClientAnswer } from '../openapi/DRES/client/src/index';
 import { DRES_USER, DRES_PASSWORD } from '../config';
+
+export const submitImage = (submissionApi, session, run, imageId, onSuccess, onError) => {
+    const answer = new ApiClientAnswer();
+    answer.mediaItemName = imageId;
+
+    const answerSet = new ApiClientAnswerSet([answer]);
+
+    const submission = new ApiClientSubmission([answerSet]);
+
+    console.log("Submitting image:", imageId)
+    console.log("Submission object:", submission);
+    console.log("Run ID:", run);
+
+    submissionApi.postApiV2SubmitByEvaluationId(
+        run,
+        submission,
+        { session: session },
+        (error, data, response) => {
+            if (error) {
+                onError(error.message);
+            } else {
+                onSuccess(data);
+            }
+        }
+    )
+};
+
+export const DresSubmitImage = ({ submissionApi, dresSession, activeRun, imageId }) => {
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState(null);
+    const [submitSuccess, setSubmitSuccess] = useState(false);
+
+    const handleSubmit = () => {
+        if (!imageId) {
+            setSubmitError("No image selected to submit.");
+            return;
+        }
+        setIsSubmitting(true);
+        setSubmitError(null);
+        setSubmitSuccess(false);
+
+        const onSuccess = (data) => {
+            setIsSubmitting(false);
+            setSubmitSuccess(true);
+            console.log("Submission successful", data);
+        };
+
+        const onError = (error) => {
+            setIsSubmitting(false);
+            setSubmitError(error);
+            console.error("Submission failed", error);
+        };
+
+        submitImage(submissionApi, dresSession, activeRun, imageId, onSuccess, onError);
+    };
+
+    return (
+        <div className="flex flex-col gap-2">
+            <button
+                className="px-2 py-1 bg-blue-500 text-white rounded shadow hover:bg-blue-600 transition disabled:bg-gray-400"
+                onClick={handleSubmit}
+                disabled={isSubmitting || !dresSession || !activeRun}
+            >
+                {isSubmitting ? 'Submitting...' : 'Submit Image'}
+            </button>
+            {submitError && <p className="text-red-500 text-xs">{submitError}</p>}
+            {submitSuccess && <p className="text-green-500 text-xs">Submission successful!</p>}
+        </div>
+    );
+};
 
 export const DresLogin = ({ userApi, runInfoApi, dresSession, setDresSession, activeRun, setActiveRun }) => {
     const [error, setError] = useState(null);
@@ -68,7 +138,7 @@ export const DresLogin = ({ userApi, runInfoApi, dresSession, setDresSession, ac
                         <label htmlFor="run-select" className="text-sm"></label>
                         <select
                             id="run-select"
-                            value={activeRun}
+                            value={activeRun || ''}
                             onChange={(e) => setActiveRun(e.target.value)}
                             className="flex-grow p-1 border rounded text-xs"
                         >

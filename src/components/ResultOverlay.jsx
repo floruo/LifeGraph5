@@ -1,4 +1,5 @@
 import React from 'react';
+import { DresSubmitImage } from './DresClient';
 
 const ResultOverlay = ({
     overlayImageUrl,
@@ -19,6 +20,9 @@ const ResultOverlay = ({
     setContextUri,
     contextValue,
     setContextValue,
+    submissionApi,
+    dresSession,
+    activeRun,
 }) => {
     if (!overlayImageUrl) return null;
     const currentObj = imageUris.find(obj => obj.uri === overlayImageUrl);
@@ -114,6 +118,7 @@ const ResultOverlay = ({
                                     type="number"
                                     min={1}
                                     max={500}
+
                                     value={contextValue}
                                     onChange={e => setContextValue(Math.max(1, Math.min(500, parseInt(e.target.value)) || 1))}
                                     className="w-16 px-2 py-1 border rounded text-sm"
@@ -122,7 +127,8 @@ const ResultOverlay = ({
                             </div>
                         </div>
                     </div>
-                    {/* Center: Navigation buttons */}
+
+                    {/* Middle: Navigation */}
                     <div className="flex items-center justify-center">
                         <button
                             onClick={showPrevImage}
@@ -143,8 +149,16 @@ const ResultOverlay = ({
                             &#8594;
                         </button>
                     </div>
-                    {/* Right: Placeholder for alignment */}
-                    <div style={{ width: 320 }} />
+
+                    {/* Right: DRES Submission */}
+                    <div className="flex flex-row items-center justify-end gap-2" style={{ width: 320 }}>
+                        <DresSubmitImage
+                            submissionApi={submissionApi}
+                            dresSession={dresSession}
+                            activeRun={activeRun}
+                            imageId={currentObj.id}
+                        />
+                    </div>
                 </div>
             </div>
         </div>
