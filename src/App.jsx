@@ -35,6 +35,7 @@ const imagesPerRow = RESULTS_PER_ROW;
 const App = () => {
     // DRES login state
     const [dresSession, setDresSession] = useState('');
+    const [activeRun, setActiveRun] = useState(null);
     const client = new ApiClient(DRES_API_ENDPOINT);
     const userApi = new UserApi(client);
     const runInfoApi = new EvaluationClientApi(client);
@@ -624,6 +625,9 @@ const App = () => {
                             userApi={userApi}
                             dresSession={dresSession}
                             setDresSession={setDresSession}
+                            runInfoApi={runInfoApi}
+                            activeRun={activeRun}
+                            setActiveRun={setActiveRun}
                         />
                         <div className="flex flex-row items-center justify-between">
                             <button
