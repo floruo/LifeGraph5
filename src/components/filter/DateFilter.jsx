@@ -10,7 +10,7 @@ const weekdays = [
     "Sunday",
 ];
 
-const DateSelector = ({ minDate, maxDate, startDate, endDate, setStartDate, setEndDate, includeStartDay, setIncludeStartDay, includeEndDay, setIncludeEndDay, onRefreshDayRange, onDayChange, selectedWeekdays, setSelectedWeekdays, weekdayRange, setWeekdayRange, selectedYears, setSelectedYears, selectedMonths, setSelectedMonths, loadingDayRange }) => {
+const DateFilter = ({ minDate, maxDate, startDate, endDate, setStartDate, setEndDate, includeStartDay, setIncludeStartDay, includeEndDay, setIncludeEndDay, fetchDayRange, onDayChange, rangeType, setRangeType, customDays, setCustomDays, selectedWeekdays, setSelectedWeekdays, weekdayRange, setWeekdayRange, selectedYears, setSelectedYears, selectedMonths, setSelectedMonths, loadingDayRange }) => {
     // Helper to format date for input[type="range"]
     const toInputValue = (date) => date.split('-').join('');
     const fromInputValue = (val) => {
@@ -41,13 +41,13 @@ const DateSelector = ({ minDate, maxDate, startDate, endDate, setStartDate, setE
     // Remove automated query trigger on change
     const handleStartChange = (e) => {
         const val = e.target.value;
-        if (val <= endDate && val >= minDate && val <= maxDate) {
+        if (val >= minDate && val <= maxDate) {
             setStartDate(val);
         }
     };
     const handleEndChange = (e) => {
         const val = e.target.value;
-        if (val >= startDate && val >= minDate && val <= maxDate) {
+        if (val >= minDate && val <= maxDate) {
             setEndDate(val);
         }
     };
@@ -133,12 +133,57 @@ const DateSelector = ({ minDate, maxDate, startDate, endDate, setStartDate, setE
         setWeekdayRange([null, null]);
     };
 
+    // Helper to add days or months to a date string (yyyy-mm-dd)
+    const addDaysOrMonth = (dateStr, days, addMonth = false) => {
+        const d = new Date(dateStr);
+        if (addMonth) {
+            d.setMonth(d.getMonth() + 1);
+        } else {
+            d.setDate(d.getDate() + days);
+        }
+        return d.toISOString().slice(0, 10);
+    };
+
+    // Update end date when rangeType or startDate changes
+    React.useEffect(() => {
+        if (rangeType === 'none') return;
+        let days = 0;
+        let addMonth = false;
+        if (rangeType === '0') days = 0;
+        else if (rangeType === '1') days = 1;
+        else if (rangeType === '7') days = 7;
+        else if (rangeType === '30') addMonth = true;
+        else if (rangeType === 'custom') days = Number(customDays) || 0;
+        const newEnd = addDaysOrMonth(startDate, days, addMonth);
+        if (isValidDate(newEnd) && newEnd <= maxDate) {
+            setEndDate(newEnd);
+            if (includeStartDay && !includeEndDay) setIncludeEndDay(true); // only auto-check end if start is checked
+        } else if (isValidDate(newEnd) && newEnd > maxDate) {
+            setEndDate(maxDate);
+            if (includeStartDay && !includeEndDay) setIncludeEndDay(true);
+        }
+    }, [rangeType, customDays, startDate]);
+
+    const handleRefreshDayRange = () => {
+        setStartDate(minDate);
+        setEndDate(maxDate);
+        setIncludeStartDay(false);
+        setIncludeEndDay(false);
+        setRangeType('none');
+        setCustomDays(1)
+        handleClearYears();
+        handleClearMonths();
+        setSelectedWeekdays([]);
+
+        fetchDayRange(true);
+    };
+
     return (
         <div className="flex flex-col gap-4 w-full">
             <div className="flex flex-row items-center gap-2 mb-2">
                 <button
                     className="px-2 py-1 bg-gray-200 text-xs rounded hover:bg-gray-300"
-                    onClick={onRefreshDayRange}
+                    onClick={handleRefreshDayRange}
                     type="button"
                 >
                     Refresh Date Range
@@ -166,6 +211,33 @@ const DateSelector = ({ minDate, maxDate, startDate, endDate, setStartDate, setE
                             onChange={handleStartChange}
                             className="w-full px-2 py-1 border rounded"
                         />
+                    </div>
+                    {/* New: Range selector below start date, aligned with date fields */}
+                    <div className="flex flex-row items-center gap-2 mb-2">
+                        <span className="text-xs font-medium mr-2 min-w-[40px] text-right">Range:</span>
+                        <select
+                            className="w-full px-2 py-1 border rounded text-xs"
+                            value={rangeType}
+                            onChange={e => setRangeType(e.target.value)}
+                        >
+                            <option value="none">Set range...</option>
+                            <option value="0">+0 days</option>
+                            <option value="1">+1 day</option>
+                            <option value="7">+1 week</option>
+                            <option value="30">+1 month</option>
+                            <option value="custom">Custom days</option>
+                        </select>
+                        {rangeType === 'custom' && (
+                            <input
+                                type="number"
+                                min="0"
+                                max="365"
+                                value={customDays}
+                                onChange={e => setCustomDays(e.target.value)}
+                                className="ml-1 w-16 px-1 py-1 border rounded text-xs"
+                                placeholder="days"
+                            />
+                        )}
                     </div>
                     <div className="flex flex-row items-center gap-2 mb-4">
                         <input
@@ -269,4 +341,55 @@ const DateSelector = ({ minDate, maxDate, startDate, endDate, setStartDate, setE
     );
 };
 
-export default DateSelector;
+// Returns SPARQL date filter block and prefixes
+export const getDateBlock = (includeStartDay, includeEndDay, startDay, endDay, selectedWeekdays, selectedYears, selectedMonths, pushUnique) => {
+    let dateClauses = [];
+    let datePrefixes = [];
+    if (
+        includeStartDay || includeEndDay ||
+        (selectedWeekdays && selectedWeekdays.length > 0) ||
+        (selectedYears && selectedYears.length > 0) ||
+        (selectedMonths && selectedMonths.length > 0)
+    ) {
+        pushUnique(datePrefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
+        pushUnique(datePrefixes, 'PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>');
+        if (selectedWeekdays && selectedWeekdays.length > 0) {
+            pushUnique(datePrefixes, 'PREFIX megras: <http://megras.org/sparql#>');
+        }
+        let dateBlock = [
+            '    ?img lsc:day ?day .',
+            '    BIND(xsd:date(STRAFTER(STR(?day), "#")) AS ?dayDate)'
+        ];
+        if (includeStartDay && includeEndDay) {
+            dateBlock.push(`    FILTER (?dayDate >= "${startDay}"^^xsd:date && ?dayDate <= "${endDay}"^^xsd:date)`);
+        } else if (includeStartDay) {
+            dateBlock.push(`    FILTER (?dayDate >= "${startDay}"^^xsd:date)`);
+        } else if (includeEndDay) {
+            dateBlock.push(`    FILTER (?dayDate <= "${endDay}"^^xsd:date)`);
+        }
+        if (selectedWeekdays && selectedWeekdays.length > 0) {
+            const weekdayMap = {
+                'Monday': 1,
+                'Tuesday': 2,
+                'Wednesday': 3,
+                'Thursday': 4,
+                'Friday': 5,
+                'Saturday': 6,
+                'Sunday': 7
+            };
+            const selectedNumbers = selectedWeekdays.map(day => weekdayMap[day]);
+            dateBlock.push(`    FILTER (megras:DAYOFWEEK(?dayDate) IN (${selectedNumbers.join(", ")}))`);
+        }
+        if (selectedYears && selectedYears.length > 0) {
+            const yearFilters = selectedYears.map(y => `YEAR(?dayDate) = ${y}`).join(' || ');
+            dateBlock.push(`    FILTER (${yearFilters})`);
+        }
+        if (selectedMonths && selectedMonths.length > 0) {
+            dateBlock.push(`    FILTER (MONTH(?dayDate) IN (${selectedMonths.join(", ")}))`);
+        }
+        dateClauses.push(`  {\n${dateBlock.join('\n')}\n  }`);
+    }
+    return { dateClauses, datePrefixes };
+};
+
+export default DateFilter;
