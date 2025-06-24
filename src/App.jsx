@@ -20,6 +20,7 @@ import { renderFilterPanel } from './components/RenderFilters.jsx';
 import ResultOverlay from './components/ResultOverlay.jsx';
 import SparqlQueryArea from "./components/SparqlQueryArea";
 import ResultDisplay from './components/ResultDisplay.jsx';
+import LogViewer from './components/LogViewer.jsx';
 
 
 // Configurable filter order
@@ -36,6 +37,12 @@ const App = () => {
     const [triggerFetch, setTriggerFetch] = useState(0);
     const [allTags, setAllTags] = useState([]);
     const [loadingTags, setLoadingTags] = useState(true);
+    const [logs, setLogs] = useState([]);
+    const [showLogs, setShowLogs] = useState(false);
+
+    const addLogEntry = (logEntry) => {
+        setLogs(prevLogs => [...prevLogs, { id: prevLogs.length, ...logEntry }]);
+    };
 
     // Country selector state
     const [allCountries, setAllCountries] = useState([]);
@@ -243,6 +250,7 @@ const App = () => {
             setImageUris([]);
             setQueryTime(null);
             const start = performance.now();
+            addLogEntry({ type: 'query', timestamp: new Date().toISOString(), query: sparqlQuery });
             const bindings = await executeSparqlQuery(sparqlQuery);
             const end = performance.now();
             setQueryTime(end - start);
@@ -255,6 +263,7 @@ const App = () => {
                 }))
                 .filter(obj => obj.uri);
             setImageUris(uris);
+            addLogEntry({ type: 'results', timestamp: new Date().toISOString(), results: uris });
         } catch (err) {
             console.error('Error fetching image data:', err);
             setError(`Failed to fetch data: ${err.message}`);
@@ -541,6 +550,10 @@ const App = () => {
         //setTriggerFetch(0);
     };
 
+    const handleClearLogs = () => {
+        setLogs([]);
+    };
+
     const [collapseAllFilters, setCollapseAllFilters] = useState(false);
 
     // Reset collapseAllFilters to false after triggering collapse
@@ -799,6 +812,16 @@ const App = () => {
                 contextValue={contextValue}
                 setContextValue={setContextValue}
             />
+            {showLogs ? (
+                <LogViewer logs={logs} onClear={handleClearLogs} onClose={() => setShowLogs(false)} />
+            ) : (
+                <button
+                    onClick={() => setShowLogs(true)}
+                    className="fixed bottom-4 right-4 bg-blue-500 text-white p-3 rounded-full shadow-lg hover:bg-blue-600 transition"
+                >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                </button>
+            )}
         </div>
     );
 };
