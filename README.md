@@ -9,6 +9,8 @@ A React-based frontend for exploring and querying lifelog image data using tags 
 - Interactive UI for building and running SPARQL queries
 - Responsive design using Tailwind CSS
 - Modular component structure for easy customization
+- Submissions to the Distributed Retrieval Evaluation Server ([DRES](https://github.com/dres-dev/DRES))
+- Supports logging
 
 ## IMPORTANT: Changes Made to the LSC23 Data
 
@@ -60,6 +62,8 @@ src/
     ResultDisplay.jsx    # Displays query results
     ResultOverlay.jsx    # Overlay for results
     SparqlQueryArea.jsx  # SPARQL query editor and runner
+    LogViewer.jsx        # Displays logs
+    DresClient.jsx       # DRES client for submissions
     filter/
       CaptionFilter.jsx  # Filter by caption
       ClipFilter.jsx     # Filter by clip
@@ -73,7 +77,10 @@ src/
       LocationSelector.jsx # Select location
       TagSelector.jsx      # Select tags
   utils/
-  sparql.js       # SPARQL query utilities
+    sparql.js  # SPARQL query utilities
+  openapi/
+    DRES/
+      client      # DRES client for API interactions
   index.html      # HTML template
   vite.config.js  # Vite config
   package.json    # Project metadata and scripts
@@ -92,6 +99,13 @@ src/
 - **Styling:** Uses Tailwind CSS and Inter font (see `index.html` and `index.css`).
 - **SPARQL Queries:** Modify or extend queries as needed.
 - **Filters & Selectors:** Add or customize filter/selector components in `src/components/filter/` and `src/components/selector/`.
+- **DRES Configuration:** Create a `config.local.json` in `src` and add the user and password in the following format:
+   ```json
+   {
+      "DRES_USER": "MyUserName",
+      "DRES_PASSWORD": "MyPassword"
+   }
+   ```
 
 ## License
 
