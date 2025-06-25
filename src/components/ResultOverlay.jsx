@@ -106,6 +106,7 @@ const ResultOverlay = ({
                                     className="ml-4 px-3 py-1 rounded bg-orange-600 text-white text-xs font-semibold shadow hover:bg-orange-700 transition"
                                     style={{ minWidth: 0,  }}
                                     onClick={() => {
+                                        setContextActive(false);
                                         setContextActive(true);
                                         setContextUri(overlayImageUrl);
                                         handleCloseOverlay();

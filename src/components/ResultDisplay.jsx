@@ -11,7 +11,9 @@ const ResultDisplay = ({
   triggerFetch,
   selectedTags,
   overlayImageUrl,
-  configuredImagesPerRow
+  configuredImagesPerRow,
+  contextActive = false,
+  contextUri = null
 }) => {
   const [imagesPerRow, setImagesPerRow] = React.useState(configuredImagesPerRow);
   const [fullscreen, setFullscreen] = React.useState(false);
@@ -69,6 +71,73 @@ const ResultDisplay = ({
         <p className="text-center text-gray-600 text-lg">No results found.</p>
       </div>
     );
+  }
+  if (contextActive && contextUri && imageUris.length > 0) {
+    // Find the index of the context image
+    const idx = imageUris.findIndex(obj => obj.uri === contextUri);
+    if (idx !== -1) {
+      const before = imageUris.slice(0, idx);
+      const contextImg = imageUris[idx];
+      const after = imageUris.slice(idx + 1);
+      return (
+        <div className={`w-full flex flex-col gap-8`}>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-700 mb-2">Before</h2>
+            <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-${imagesPerRow} gap-4`}>
+              {before.map((obj, index) => (
+                <div
+                  key={index}
+                  className="bg-gray-100 p-2 rounded-lg shadow flex justify-center items-center overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-200"
+                  onClick={(e) => handleImageClick(e, obj)}
+                >
+                  <img
+                    src={obj.uri + "/preview"}
+                    alt="Preview"
+                    className="max-h-32 max-w-full object-contain rounded shadow cursor-pointer hover:scale-105 transition-transform duration-200"
+                    onClick={e => { e.stopPropagation(); handleImageClick(e, obj); }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-blue-700 mb-2">Context Image</h2>
+            <div className="flex justify-center">
+              <div
+                className="bg-yellow-100 p-4 rounded-lg shadow-lg flex justify-center items-center overflow-hidden border-4 border-blue-400"
+                onClick={(e) => handleImageClick(e, contextImg)}
+              >
+                <img
+                  src={contextImg.uri + "/preview"}
+                  alt="Context Preview"
+                  className="max-h-64 max-w-full object-contain rounded shadow cursor-pointer hover:scale-105 transition-transform duration-200"
+                  onClick={e => { e.stopPropagation(); handleImageClick(e, contextImg); }}
+                />
+              </div>
+            </div>
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-700 mb-2">After</h2>
+            <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-${imagesPerRow} gap-4`}>
+              {after.map((obj, index) => (
+                <div
+                  key={index}
+                  className="bg-gray-100 p-2 rounded-lg shadow flex justify-center items-center overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-200"
+                  onClick={(e) => handleImageClick(e, obj)}
+                >
+                  <img
+                    src={obj.uri + "/preview"}
+                    alt="Preview"
+                    className="max-h-32 max-w-full object-contain rounded shadow cursor-pointer hover:scale-105 transition-transform duration-200"
+                    onClick={e => { e.stopPropagation(); handleImageClick(e, obj); }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
   }
   return (
     <div className={`w-full flex-1${fullscreen ? ' fixed inset-0 z-50 bg-white p-8 overflow-auto' : ''}`}>

@@ -335,7 +335,6 @@ const App = () => {
                 `    <${contextUri}> lsc:ordinal ?ordinal .`,
                 '    ?img lsc:ordinal ?ord .',
                 `    BIND (${contextValue} AS ?n)`,
-                ' ',
                 '    FILTER ((?ord >= (?ordinal - ?n)) && (?ord <= (?ordinal + ?n)))',
                 '  }'
             ].filter(Boolean).join('\n');
@@ -465,7 +464,8 @@ const App = () => {
             'WHERE {',
             '  ?img lsc:id ?id .',
             whereClauses.join('\n'),
-            '}'
+            '}',
+            'ORDER BY ?id',
         ].join('\n');
     };
 
@@ -829,6 +829,8 @@ const App = () => {
                             selectedTags={selectedTags}
                             overlayImageUrl={overlayImageUrl}
                             configuredImagesPerRow={imagesPerRow}
+                            contextActive={contextActive}
+                            contextUri={contextUri}
                         />
                     </div>
                 </div>
