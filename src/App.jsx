@@ -243,7 +243,7 @@ const App = () => {
     // Update the live SPARQL query
     useEffect(() => {
         setLiveSparqlQuery(getSparqlQuery());
-    }, [selectedTags, selectedCountry, selectedCity, selectedLocation, includeStartDay, includeEndDay, startDate, endDate, selectedWeekdays, selectedYears, queryMode, selectedMonths, selectedCategories, groupByDay, includeStartTime, includeEndTime, startTime, endTime, selectedCaption, clipSimilarityText, clipSimilarityThreshold, selectedOcr, knnActive, nearDuplicateActive, contextActive]);
+    }, [selectedTags, selectedCountry, selectedCity, selectedLocation, includeStartDay, includeEndDay, startDate, endDate, selectedWeekdays, selectedYears, queryMode, selectedMonths, selectedCategories, groupByDay, includeStartTime, includeEndTime, startTime, endTime, selectedCaption, clipSimilarityText, clipSimilarityThreshold, selectedOcr, knnActive, nearDuplicateActive, contextActive, contextUri, contextValue]);
 
     // Fetch min/max day from SPARQL endpoint on mount or when forceFetchDayRange changes
     useEffect(() => {
@@ -335,7 +335,6 @@ const App = () => {
                 `    <${contextUri}> lsc:ordinal ?ordinal .`,
                 '    ?img lsc:ordinal ?ord .',
                 `    BIND (${contextValue} AS ?n)`,
-                ' ',
                 '    FILTER ((?ord >= (?ordinal - ?n)) && (?ord <= (?ordinal + ?n)))',
                 '  }'
             ].filter(Boolean).join('\n');
@@ -465,7 +464,8 @@ const App = () => {
             'WHERE {',
             '  ?img lsc:id ?id .',
             whereClauses.join('\n'),
-            '}'
+            '}',
+            'ORDER BY ?id',
         ].join('\n');
     };
 
@@ -794,25 +794,26 @@ const App = () => {
                                 setShowSparql={setShowSparql}
                                 liveSparqlQuery={liveSparqlQuery}
                             />
-                            <div className="w-full flex flex-row items-center justify-center gap-4 mb-2">
-                                {imageUris.length > 0 && !loading && !error && (
-                                    <>
-                                        <span className="text-lg font-semibold text-gray-700">{imageUris.length} result{imageUris.length !== 1 ? 's' : ''} found</span>
-                                        <button
-                                            className="px-3 py-1 bg-red-100 text-red-700 rounded shadow hover:bg-red-200 transition text-xs"
-                                            onClick={handleClearResults}
-                                            disabled={loading}
-                                            type="button"
-                                        >
-                                            Clear Results
-                                        </button>
-                                    </>
-                                )}
-                            </div>
-                            {queryTime !== null && !loading && !error && (
-                                <div className="w-full mb-2 text-sm text-gray-500 text-center">
-                                    Query executed in {(queryTime / 1000).toFixed(1)}s
-                                </div>
+                            {/* Floating buttons for LogViewer and SPARQL Query */}
+                            {!showSparql && (
+                                <button
+                                    onClick={() => setShowSparql(true)}
+                                    className="fixed bottom-4 right-4 bg-green-500 text-white p-3 rounded-full shadow-lg hover:bg-green-600 transition z-50"
+                                    title="Show SPARQL Query"
+                                >
+                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"> </path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 2v4m8-4v4" /></svg>
+                                </button>
+                            )}
+                            {showLogs ? (
+                                <LogViewer logs={logs} onClear={handleClearLogs} onClose={() => setShowLogs(false)} position="top" />
+                            ) : (
+                                <button
+                                    onClick={() => setShowLogs(true)}
+                                    className="fixed top-4 right-4 bg-blue-500 text-white p-3 rounded-full shadow-lg hover:bg-blue-600 transition z-50"
+                                    title="Show Query Logs"
+                                >
+                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                </button>
                             )}
                         </div>
                     </div>
@@ -829,6 +830,8 @@ const App = () => {
                             selectedTags={selectedTags}
                             overlayImageUrl={overlayImageUrl}
                             configuredImagesPerRow={imagesPerRow}
+                            contextActive={contextActive}
+                            contextUri={contextUri}
                         />
                     </div>
                 </div>
@@ -860,16 +863,6 @@ const App = () => {
                 dresSession={dresSession}
                 activeRun={activeRun}
             />
-            {showLogs ? (
-                <LogViewer logs={logs} onClear={handleClearLogs} onClose={() => setShowLogs(false)} />
-            ) : (
-                <button
-                    onClick={() => setShowLogs(true)}
-                    className="fixed bottom-4 right-4 bg-blue-500 text-white p-3 rounded-full shadow-lg hover:bg-blue-600 transition"
-                >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                </button>
-            )}
         </div>
     );
 };

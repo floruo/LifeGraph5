@@ -11,7 +11,9 @@ const ResultDisplay = ({
   triggerFetch,
   selectedTags,
   overlayImageUrl,
-  configuredImagesPerRow
+  configuredImagesPerRow,
+  contextActive = false,
+  contextUri = null
 }) => {
   const [imagesPerRow, setImagesPerRow] = React.useState(configuredImagesPerRow);
   const [fullscreen, setFullscreen] = React.useState(false);
@@ -69,6 +71,99 @@ const ResultDisplay = ({
         <p className="text-center text-gray-600 text-lg">No results found.</p>
       </div>
     );
+  }
+  if (contextActive && contextUri && imageUris.length > 0) {
+    // Find the index of the context image
+    const idx = imageUris.findIndex(obj => obj.uri === contextUri);
+    if (idx !== -1) {
+      const before = imageUris.slice(0, idx);
+      const contextImg = imageUris[idx];
+      const after = imageUris.slice(idx + 1);
+      return (
+        <div className={`w-full flex-1${fullscreen ? ' fixed inset-0 z-50 bg-white p-8 overflow-auto' : ''}`}>
+          {imageUris.length > 0 && (
+            <div className="w-full flex justify-between items-center mb-2 gap-2">
+              <div className="flex items-center">
+                <label htmlFor="imagesPerRow" className="mr-2 text-sm text-gray-700">Images per row:</label>
+                <select
+                  id="imagesPerRow"
+                  value={imagesPerRow}
+                  onChange={e => setImagesPerRow(Number(e.target.value))}
+                  className="border rounded px-2 py-1 text-sm"
+                >
+                  {[4, 6, 8, 10, 12].map(num => (
+                    <option key={num} value={num}>{num}</option>
+                  ))}
+                </select>
+              </div>
+              <button
+                className={`px-3 py-1 rounded shadow text-xs transition ${fullscreen ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}
+                onClick={() => setFullscreen(f => !f)}
+                type="button"
+              >
+                {fullscreen ? 'Exit Fullscreen' : 'Fullscreen Results'}
+              </button>
+            </div>
+          )}
+          <div className="w-full flex flex-col gap-8">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-700 mb-2">Before</h2>
+              <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-${imagesPerRow} gap-4`}>
+                {before.map((obj, index) => (
+                  <div
+                    key={index}
+                    className="bg-gray-100 p-2 rounded-lg shadow flex justify-center items-center overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-200"
+                    onClick={(e) => handleImageClick(e, obj)}
+                  >
+                    <img
+                      src={obj.uri + "/preview"}
+                      alt="Preview"
+                      className="max-h-32 max-w-full object-contain rounded shadow cursor-pointer hover:scale-105 transition-transform duration-200"
+                      onClick={e => { e.stopPropagation(); handleImageClick(e, obj); }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-blue-700 mb-2">Context Image</h2>
+              <div className="flex justify-center">
+                <div
+                  className="bg-yellow-100 p-4 rounded-lg shadow-lg flex justify-center items-center overflow-hidden border-4 border-blue-400"
+                  onClick={(e) => handleImageClick(e, contextImg)}
+                >
+                  <img
+                    src={contextImg.uri + "/preview"}
+                    alt="Context Preview"
+                    className="max-h-64 max-w-full object-contain rounded shadow cursor-pointer hover:scale-105 transition-transform duration-200"
+                    onClick={e => { e.stopPropagation(); handleImageClick(e, contextImg); }}
+                  />
+                </div>
+              </div>
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-700 mb-2">After</h2>
+              <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-${imagesPerRow} gap-4`}>
+                {after.map((obj, index) => (
+                  <div
+                    key={index}
+                    className="bg-gray-100 p-2 rounded-lg shadow flex justify-center items-center overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-200"
+                    onClick={(e) => handleImageClick(e, obj)}
+                  >
+                    <img
+                      src={obj.uri + "/preview"}
+                      alt="Preview"
+                      className="max-h-32 max-w-full object-contain rounded shadow cursor-pointer hover:scale-105 transition-transform duration-200"
+                      onClick={e => { e.stopPropagation(); handleImageClick(e, obj); }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
   }
   return (
     <div className={`w-full flex-1${fullscreen ? ' fixed inset-0 z-50 bg-white p-8 overflow-auto' : ''}`}>

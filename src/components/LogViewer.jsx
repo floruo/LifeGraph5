@@ -1,6 +1,6 @@
 import React from 'react';
 
-const LogViewer = ({ logs, onClear, onClose }) => {
+const LogViewer = ({ logs, onClear, onClose, position = 'bottom' }) => {
     const downloadLogs = () => {
         const blob = new Blob([JSON.stringify(logs, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -14,7 +14,7 @@ const LogViewer = ({ logs, onClear, onClose }) => {
     };
 
     return (
-        <div className="fixed bottom-4 right-4 bg-white p-4 rounded-lg shadow-lg max-w-sm w-full z-50">
+        <div className={`fixed ${position === 'top' ? 'top-20' : 'bottom-4'} right-4 bg-white p-4 rounded-lg shadow-lg max-w-sm w-full z-50`}>
             <div className="flex justify-between items-center mb-2">
                 <h3 className="text-lg font-bold">Query Logs</h3>
                 <button
