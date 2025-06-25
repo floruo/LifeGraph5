@@ -243,7 +243,7 @@ const App = () => {
     // Update the live SPARQL query
     useEffect(() => {
         setLiveSparqlQuery(getSparqlQuery());
-    }, [selectedTags, selectedCountry, selectedCity, selectedLocation, includeStartDay, includeEndDay, startDate, endDate, selectedWeekdays, selectedYears, queryMode, selectedMonths, selectedCategories, groupByDay, includeStartTime, includeEndTime, startTime, endTime, selectedCaption, clipSimilarityText, clipSimilarityThreshold, selectedOcr, knnActive, nearDuplicateActive, contextActive]);
+    }, [selectedTags, selectedCountry, selectedCity, selectedLocation, includeStartDay, includeEndDay, startDate, endDate, selectedWeekdays, selectedYears, queryMode, selectedMonths, selectedCategories, groupByDay, includeStartTime, includeEndTime, startTime, endTime, selectedCaption, clipSimilarityText, clipSimilarityThreshold, selectedOcr, knnActive, nearDuplicateActive, contextActive, contextUri, contextValue]);
 
     // Fetch min/max day from SPARQL endpoint on mount or when forceFetchDayRange changes
     useEffect(() => {
