@@ -18,6 +18,7 @@ const ContextOverlay = ({
     const contextImageIndex = images.findIndex(image => image.uri === contextUri);
     const beforeImages = images.slice(0, contextImageIndex);
     const afterImages = images.slice(contextImageIndex + 1);
+    const contextImage = images[contextImageIndex];
 
     return (
         <div
@@ -50,6 +51,23 @@ const ContextOverlay = ({
                             isContextOverlay={true}
                         />
                     </div>
+                    {contextImage && (
+                        <div className="w-full py-2">
+                            <h3 className="text-xl font-bold text-center mb-2">Context Image</h3>
+                            <div className="flex justify-center">
+                                <div
+                                    className="bg-yellow-100 p-4 rounded-lg shadow-lg flex justify-center items-center overflow-hidden border-4 border-blue-400 cursor-pointer hover:shadow-xl transition-shadow duration-200"
+                                    onClick={(e) => handleImageClick(e, contextImage, true)}
+                                >
+                                    <img
+                                        src={contextImage.uri + "/preview"}
+                                        alt="Context Preview"
+                                        className="max-h-64 max-w-full object-contain rounded shadow"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    )}
                     <div className="w-full pt-2">
                         <h3 className="text-xl font-bold text-center mb-2">After</h3>
                         <ResultDisplay
