@@ -116,7 +116,7 @@ const App = () => {
 
     // States for CLIP similarity filter
     const [clipSimilarityText, setClipSimilarityText] = useState('');
-    const [clipSimilarityThreshold, setClipSimilarityThreshold] = useState(0.8);
+    const [clipSimilarityK, setClipSimilarityK] = useState(5);
 
     // State for OCR filter
     const [selectedOcr, setSelectedOcr] = useState('');
@@ -243,7 +243,7 @@ const App = () => {
     // Update the live SPARQL query
     useEffect(() => {
         setLiveSparqlQuery(getSparqlQuery());
-    }, [selectedTags, selectedCountry, selectedCity, selectedLocation, includeStartDay, includeEndDay, startDate, endDate, selectedWeekdays, selectedYears, queryMode, selectedMonths, selectedCategories, groupByDay, includeStartTime, includeEndTime, startTime, endTime, selectedCaption, clipSimilarityText, clipSimilarityThreshold, selectedOcr, knnActive, nearDuplicateActive, contextActive, contextUri, contextValue]);
+    }, [selectedTags, selectedCountry, selectedCity, selectedLocation, includeStartDay, includeEndDay, startDate, endDate, selectedWeekdays, selectedYears, queryMode, selectedMonths, selectedCategories, groupByDay, includeStartTime, includeEndTime, startTime, endTime, selectedCaption, clipSimilarityText, clipSimilarityK, selectedOcr, knnActive, nearDuplicateActive, contextActive, contextUri, contextValue]);
 
     // Fetch min/max day from SPARQL endpoint on mount or when forceFetchDayRange changes
     useEffect(() => {
@@ -368,6 +368,7 @@ const App = () => {
         }
         let whereClauses = [];
         let prefixes = [];
+        let endClauses = [];
         // Insert KNN block at the top of WHERE if active
         const knnBlock = getKnnBlock();
         if (knnActive && knnReplaceMode && knnBlock) {
@@ -443,9 +444,10 @@ const App = () => {
                 whereClauses.push(...ocrClauses);
                 ocrPrefixes.forEach(p => pushUnique(prefixes, p));
             } else if (type === 'clip') {
-                const { similarityClauses, similarityPrefixes } = getClipSimilarityBlock(clipSimilarityText, clipSimilarityThreshold, pushUnique);
+                const { similarityClauses, similarityPrefixes, similarityEndblock } = getClipSimilarityBlock(clipSimilarityText, clipSimilarityK, pushUnique);
                 whereClauses.push(...similarityClauses);
                 similarityPrefixes.forEach(p => pushUnique(prefixes, p));
+                endClauses.push(...similarityEndblock);
             }
         });
         // Only add the day triple if groupByDay is true and it is not already present from the date block
@@ -457,6 +459,7 @@ const App = () => {
         prefixes = prefixes.sort((a, b) => a.localeCompare(b));
         // Select clause depends on groupByDay
         const selectClause = groupByDay ? 'SELECT DISTINCT ?img ?id ?day' : 'SELECT DISTINCT ?img ?id';
+        endClauses.length === 0 && (endClauses = ['ORDER BY ?id']);
         return [
             ...prefixes,
             '',
@@ -465,7 +468,7 @@ const App = () => {
             '  ?img lsc:id ?id .',
             whereClauses.join('\n'),
             '}',
-            'ORDER BY ?id',
+            endClauses.join('\n'),
         ].join('\n');
     };
 
@@ -742,8 +745,8 @@ const App = () => {
                                 setSelectedCaption,
                                 clipSimilarityText,
                                 setClipSimilarityText,
-                                clipSimilarityThreshold,
-                                setClipSimilarityThreshold,
+                                clipSimilarityK,
+                                setClipSimilarityK,
                                 contextActive,
                                 setContextActive,
                                 contextUri,
