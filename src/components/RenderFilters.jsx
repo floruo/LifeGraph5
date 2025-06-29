@@ -10,22 +10,36 @@ import CaptionFilter from './filter/CaptionFilter.jsx';
 import OcrFilter from './filter/OcrFilter.jsx';
 import ClipFilter from './filter/ClipFilter.jsx';
 
-export const CollapsiblePanel = ({ title, children, defaultOpen = false, className = "", forceCollapse, active = false }) => {
+export const CollapsiblePanel = ({ title, children, defaultOpen = false, className = "", forceCollapse, active = false, open: openProp, onToggle: onToggleProp }) => {
     const [open, setOpen] = useState(defaultOpen);
+
     useEffect(() => {
         if (forceCollapse === true) setOpen(false);
     }, [forceCollapse]);
+
+    const isControlled = openProp !== undefined;
+
+    const handleToggle = (e) => {
+        if (isControlled) {
+            onToggleProp(e);
+        } else {
+            setOpen(o => !o);
+        }
+    };
+
+    const currentOpen = isControlled ? openProp : open;
+
     return (
         <div className={`bg-gray-50 rounded-lg shadow-md p-4 w-full max-w-xs flex flex-col items-start ${className}`}>
             <button
                 className="mb-2 text-sm font-semibold text-blue-700 hover:underline focus:outline-none flex items-center justify-between w-full gap-2"
-                onClick={() => setOpen(o => !o)}
+                onClick={handleToggle}
                 type="button"
             >
-                <span className="flex items-center gap-2">{open ? '▼' : '►'} {title}</span>
+                <span className="flex items-center gap-2">{currentOpen ? '▼' : '►'} {title}</span>
                 {active && <span className="w-2 h-2 rounded-full bg-green-500 inline-block ml-2" title="Filter active"></span>}
             </button>
-            {open && <div className="w-full">{children}</div>}
+            {currentOpen && <div className="w-full">{children}</div>}
         </div>
     );
 };
