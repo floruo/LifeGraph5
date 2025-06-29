@@ -200,6 +200,8 @@ const App = () => {
     const [contextImageUris, setContextImageUris] = useState([]);
     const [contextLoading, setContextLoading] = useState(false);
     const [contextError, setContextError] = useState(null);
+    const [overlayImageSource, setOverlayImageSource] = useState([]);
+    const [isFromContextOverlay, setIsFromContextOverlay] = useState(false);
 
     // Effect: When nearDuplicateActive is set to true, clear all other filters
     useEffect(() => {
@@ -577,17 +579,25 @@ const App = () => {
     }, [forceFetchLocations]);
 
     // Handler for URI overlay
-    const handleImageClick = (e, image) => {
+    const handleImageClick = (e, image, isContext = false) => {
         if (e.ctrlKey) {
             submitImage(submissionApi, dresSession, activeRun, image.id);
         } else {
+            if (isContext) {
+                setOverlayImageSource(contextImageUris);
+            } else {
+                setOverlayImageSource(imageUris);
+            }
             setOverlayImageUrl(image.uri);
+            setIsFromContextOverlay(isContext);
         }
     };
 
     // Handler for closing the overlay
     const handleCloseOverlay = () => {
         setOverlayImageUrl(null);
+        setOverlayImageSource([]);
+        setIsFromContextOverlay(false);
     };
 
     const handleOpenContextOverlay = (uri, value) => {
@@ -668,12 +678,12 @@ const App = () => {
     const [fullscreenResults, setFullscreenResults] = useState(false);
 
     // Find the index of the current image in the list
-    const currentIndex = imageUris.findIndex(obj => obj.uri === overlayImageUrl);
+    const currentIndex = overlayImageSource.findIndex(obj => obj.uri === overlayImageUrl);
     const showPrevImage = () => {
-        if (currentIndex > 0) setOverlayImageUrl(imageUris[currentIndex - 1].uri);
+        if (currentIndex > 0) setOverlayImageUrl(overlayImageSource[currentIndex - 1].uri);
     };
     const showNextImage = () => {
-        if (currentIndex < imageUris.length - 1) setOverlayImageUrl(imageUris[currentIndex + 1].uri);
+        if (currentIndex < overlayImageSource.length - 1) setOverlayImageUrl(overlayImageSource[currentIndex + 1].uri);
     };
     // Keyboard navigation for modal
     useEffect(() => {
@@ -685,7 +695,7 @@ const App = () => {
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [overlayImageUrl, currentIndex, imageUris]);
+    }, [overlayImageUrl, currentIndex, overlayImageSource]);
 
     return (
         <div className="min-h-screen bg-gray-100 flex flex-col items-center p-4 font-inter">
@@ -909,7 +919,7 @@ const App = () => {
             {/* Image Overlay */}
             <ResultOverlay
                 overlayImageUrl={overlayImageUrl}
-                imageUris={imageUris}
+                imageUris={overlayImageSource}
                 handleCloseOverlay={handleCloseOverlay}
                 setKnnActive={setKnnActive}
                 setKnnUri={setKnnUri}
@@ -928,6 +938,7 @@ const App = () => {
                 submissionApi={submissionApi}
                 dresSession={dresSession}
                 activeRun={activeRun}
+                isFromContext={isFromContextOverlay}
             />
             <ContextOverlay
                 show={showContextOverlay}

@@ -22,12 +22,13 @@ const ResultOverlay = ({
     submissionApi,
     dresSession,
     activeRun,
+    isFromContext,
 }) => {
     if (!overlayImageUrl) return null;
-    const currentObj = imageUris.find(obj => obj.uri === overlayImageUrl);
+    const currentObj = imageUris.find(obj => obj.uri === overlayImageUrl) || {};
     return (
         <div
-            className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center"
+            className="fixed inset-0 bg-black bg-opacity-75 z-[60] flex items-center justify-center"
             onClick={handleCloseOverlay}
         >
             <div className="relative bg-white p-4 rounded-lg shadow-2xl max-w-5xl max-h-full overflow-hidden flex flex-col items-center" onClick={e => e.stopPropagation()}>
@@ -108,6 +109,7 @@ const ResultOverlay = ({
                                         handleCloseOverlay();
                                     }}
                                     title="Show context for this image"
+                                    //disabled={isFromContext}
                                 >
                                     Context
                                 </button>
@@ -120,6 +122,7 @@ const ResultOverlay = ({
                                     onChange={e => setContextValue(Math.max(1, Math.min(500, parseInt(e.target.value)) || 1))}
                                     className="w-16 px-2 py-1 border rounded text-sm"
                                     title="n"
+                                    disabled={isFromContext}
                                 />
                             </div>
                         </div>
@@ -149,11 +152,12 @@ const ResultOverlay = ({
 
                     {/* Right: DRES Submission */}
                     <div className="flex flex-row items-center justify-end gap-2" style={{ width: 320 }}>
-                        <DresSubmission
+                         <DresSubmission
                             submissionApi={submissionApi}
                             dresSession={dresSession}
                             activeRun={activeRun}
                             imageId={currentObj.id}
+                            disabled={!currentObj.id}
                         />
                     </div>
                 </div>

@@ -8,11 +8,16 @@ const ContextOverlay = ({
     loading,
     error,
     handleImageClick,
-    configuredImagesPerRow
+    configuredImagesPerRow,
+    contextUri
 }) => {
     if (!show) {
         return null;
     }
+
+    const contextImageIndex = images.findIndex(image => image.uri === contextUri);
+    const beforeImages = images.slice(0, contextImageIndex);
+    const afterImages = images.slice(contextImageIndex + 1);
 
     return (
         <div
@@ -31,15 +36,33 @@ const ContextOverlay = ({
                     &times;
                 </button>
                 <h2 className="text-2xl font-bold text-gray-800 mb-4">Context Results</h2>
-                <div className="w-full">
-                    <ResultDisplay
-                        imageUris={images}
-                        loading={loading}
-                        error={error}
-                        groupByDay={false}
-                        handleImageClick={handleImageClick}
-                        configuredImagesPerRow={configuredImagesPerRow}
-                    />
+                <div className="w-full flex flex-col justify-around">
+                    <div className="w-full pb-2">
+                        <h3 className="text-xl font-bold text-center mb-2">Before</h3>
+                        <ResultDisplay
+                            imageUris={beforeImages}
+                            loading={loading}
+                            error={error}
+                            groupByDay={false}
+                            handleImageClick={(e, img) => handleImageClick(e, img, true)}
+                            configuredImagesPerRow={configuredImagesPerRow}
+                            contextUri={contextUri}
+                            isContextOverlay={true}
+                        />
+                    </div>
+                    <div className="w-full pt-2">
+                        <h3 className="text-xl font-bold text-center mb-2">After</h3>
+                        <ResultDisplay
+                            imageUris={afterImages}
+                            loading={loading}
+                            error={error}
+                            groupByDay={false}
+                            handleImageClick={(e, img) => handleImageClick(e, img, true)}
+                            configuredImagesPerRow={configuredImagesPerRow}
+                            contextUri={contextUri}
+                            isContextOverlay={true}
+                        />
+                    </div>
                 </div>
             </div>
         </div>
@@ -47,4 +70,3 @@ const ContextOverlay = ({
 };
 
 export default ContextOverlay;
-
