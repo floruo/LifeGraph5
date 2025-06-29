@@ -21,6 +21,7 @@ import ResultOverlay from './components/ResultOverlay.jsx';
 import SparqlQueryArea from "./components/SparqlQueryArea";
 import ResultDisplay from './components/ResultDisplay.jsx';
 import LogViewer from './components/LogViewer.jsx';
+import ContextOverlay from './components/ContextOverlay.jsx';
 
 import { DresLogin, submitImage } from "./components/DresClient.jsx";
 
@@ -194,6 +195,12 @@ const App = () => {
     const [contextUri, setContextUri] = useState(null);
     const [contextValue, setContextValue] = useState(10);
 
+    // New state for context overlay
+    const [showContextOverlay, setShowContextOverlay] = useState(false);
+    const [contextImageUris, setContextImageUris] = useState([]);
+    const [contextLoading, setContextLoading] = useState(false);
+    const [contextError, setContextError] = useState(null);
+
     // Effect: When nearDuplicateActive is set to true, clear all other filters
     useEffect(() => {
         if (nearDuplicateActive || contextActive) {
@@ -236,6 +243,34 @@ const App = () => {
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [nearDuplicateActive, contextActive]);
+
+    const fetchContextImageUris = async (uri, value) => {
+        setContextLoading(true);
+        setContextError(null);
+        setContextImageUris([]);
+        setShowContextOverlay(true);
+
+        const contextQuery = getSparqlQuery(true, uri, value);
+
+        try {
+            addLogEntry({ type: 'query', timestamp: new Date().toISOString(), query: contextQuery });
+            const bindings = await executeSparqlQuery(contextQuery);
+            const uris = bindings
+                .map(binding => ({
+                    uri: binding.img?.value,
+                    id: binding.id?.value,
+                    day: binding.day?.value
+                }))
+                .filter(obj => obj.uri);
+            setContextImageUris(uris);
+            addLogEntry({ type: 'results', timestamp: new Date().toISOString(), results: uris });
+        } catch (err) {
+            console.error('Error fetching context image data:', err);
+            setContextError(`Failed to fetch context data: ${err.message}`);
+        } finally {
+            setContextLoading(false);
+        }
+    };
 
     // Store the latest SPARQL query for live display
     const [liveSparqlQuery, setLiveSparqlQuery] = useState('');
@@ -328,13 +363,13 @@ const App = () => {
     };
 
     // context filter block
-    const getContextBlock = () => {
-        if (contextActive && contextUri) {
+    const getContextBlock = (useContext, uri, value) => {
+        if (useContext && uri) {
             return [
                 '  {',
-                `    <${contextUri}> lsc:ordinal ?ordinal .`,
+                `    <${uri}> lsc:ordinal ?ordinal .`,
                 '    ?img lsc:ordinal ?ord .',
-                `    BIND (${contextValue} AS ?n)`,
+                `    BIND (${value} AS ?n)`,
                 '    FILTER ((?ord >= (?ordinal - ?n)) && (?ord <= (?ordinal + ?n)))',
                 '  }'
             ].filter(Boolean).join('\n');
@@ -343,7 +378,24 @@ const App = () => {
     };
 
     // Main SPARQL query builder
-    const getSparqlQuery = () => {
+    const getSparqlQuery = (isContextQuery = false, contextUriForQuery = null, contextValueForQuery = null) => {
+        if (isContextQuery) {
+            const prefixes = [];
+            pushUnique(prefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
+            const contextBlock = getContextBlock(true, contextUriForQuery, contextValueForQuery);
+            return [
+                ...prefixes,
+                '',
+                'SELECT DISTINCT ?img ?id ?day',
+                'WHERE {',
+                '  ?img lsc:id ?id .',
+                '  ?img lsc:day ?day .',
+                contextBlock,
+                '}',
+                'ORDER BY ?id'
+            ].join('\n');
+        }
+
         if (
             selectedTags.length === 0 &&
             !selectedCountry &&
@@ -395,7 +447,7 @@ const App = () => {
             }
         }
         if (contextActive && contextUri) {
-            const contextBlock = getContextBlock();
+            const contextBlock = getContextBlock(contextActive, contextUri, contextValue);
             if (contextBlock) {
                 whereClauses.push(contextBlock);
                 pushUnique(prefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
@@ -536,6 +588,18 @@ const App = () => {
     // Handler for closing the overlay
     const handleCloseOverlay = () => {
         setOverlayImageUrl(null);
+    };
+
+    const handleOpenContextOverlay = (uri, value) => {
+        setContextUri(uri);
+        fetchContextImageUris(uri, value);
+    };
+
+    const handleCloseContextOverlay = () => {
+        setShowContextOverlay(false);
+        setContextImageUris([]);
+        setContextError(null);
+        setContextUri(null);
     };
 
     // Handler for search button click
@@ -858,13 +922,22 @@ const App = () => {
                 showPrevImage={showPrevImage}
                 showNextImage={showNextImage}
                 currentIndex={currentIndex}
-                setContextActive={setContextActive}
-                setContextUri={setContextUri}
+                onOpenContextOverlay={handleOpenContextOverlay}
                 contextValue={contextValue}
                 setContextValue={setContextValue}
                 submissionApi={submissionApi}
                 dresSession={dresSession}
                 activeRun={activeRun}
+            />
+            <ContextOverlay
+                show={showContextOverlay}
+                onClose={handleCloseContextOverlay}
+                images={contextImageUris}
+                loading={contextLoading}
+                error={contextError}
+                handleImageClick={handleImageClick}
+                configuredImagesPerRow={imagesPerRow}
+                contextUri={contextUri}
             />
         </div>
     );

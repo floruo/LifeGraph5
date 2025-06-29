@@ -16,8 +16,7 @@ const ResultOverlay = ({
     showPrevImage,
     showNextImage,
     currentIndex,
-    setContextActive,
-    setContextUri,
+    onOpenContextOverlay,
     contextValue,
     setContextValue,
     submissionApi,
@@ -28,7 +27,7 @@ const ResultOverlay = ({
     const currentObj = imageUris.find(obj => obj.uri === overlayImageUrl);
     return (
         <div
-            className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center"
             onClick={handleCloseOverlay}
         >
             <div className="relative bg-white p-4 rounded-lg shadow-2xl max-w-5xl max-h-full overflow-hidden flex flex-col items-center" onClick={e => e.stopPropagation()}>
@@ -61,7 +60,6 @@ const ResultOverlay = ({
                                 style={{ minWidth: 0 }}
                                 onClick={() => {
                                     setKnnActive(true);
-                                    setKnnUri(overlayImageUrl);
                                     handleCloseOverlay();
                                 }}
                                 title="Add KNN block to query"
@@ -106,9 +104,7 @@ const ResultOverlay = ({
                                     className="ml-4 px-3 py-1 rounded bg-orange-600 text-white text-xs font-semibold shadow hover:bg-orange-700 transition"
                                     style={{ minWidth: 0,  }}
                                     onClick={() => {
-                                        setContextActive(false);
-                                        setContextActive(true);
-                                        setContextUri(overlayImageUrl);
+                                        onOpenContextOverlay(overlayImageUrl, contextValue);
                                         handleCloseOverlay();
                                     }}
                                     title="Show context for this image"
