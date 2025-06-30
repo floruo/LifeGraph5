@@ -122,7 +122,7 @@ const ResultOverlay = ({
                                     onChange={e => setContextValue(Math.max(1, Math.min(500, parseInt(e.target.value)) || 1))}
                                     className="w-16 px-2 py-1 border rounded text-sm"
                                     title="n"
-                                    disabled={isFromContext}
+                                    //disabled={isFromContext}
                                 />
                             </div>
                         </div>
