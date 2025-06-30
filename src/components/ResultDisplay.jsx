@@ -361,7 +361,7 @@ const ResultDisplay = ({
           </div>
         )
       ) : (
-        (selectedTags.length > 0 && triggerFetch > 0) ? (
+        (triggerFetch > 0) ? (
           <span></span>
         ) : null
       )}
