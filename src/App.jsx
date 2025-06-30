@@ -21,6 +21,7 @@ import ResultOverlay from './components/ResultOverlay.jsx';
 import SparqlQueryArea from "./components/SparqlQueryArea";
 import ResultDisplay from './components/ResultDisplay.jsx';
 import LogViewer from './components/LogViewer.jsx';
+import ContextOverlay from './components/ContextOverlay.jsx';
 
 import { DresLogin, submitImage } from "./components/DresClient.jsx";
 
@@ -116,7 +117,7 @@ const App = () => {
 
     // States for CLIP similarity filter
     const [clipSimilarityText, setClipSimilarityText] = useState('');
-    const [clipSimilarityThreshold, setClipSimilarityThreshold] = useState(0.8);
+    const [clipSimilarityK, setClipSimilarityK] = useState(5);
 
     // State for OCR filter
     const [selectedOcr, setSelectedOcr] = useState('');
@@ -194,6 +195,14 @@ const App = () => {
     const [contextUri, setContextUri] = useState(null);
     const [contextValue, setContextValue] = useState(10);
 
+    // New state for context overlay
+    const [showContextOverlay, setShowContextOverlay] = useState(false);
+    const [contextImageUris, setContextImageUris] = useState([]);
+    const [contextLoading, setContextLoading] = useState(false);
+    const [contextError, setContextError] = useState(null);
+    const [overlayImageSource, setOverlayImageSource] = useState([]);
+    const [isFromContextOverlay, setIsFromContextOverlay] = useState(false);
+
     // Effect: When nearDuplicateActive is set to true, clear all other filters
     useEffect(() => {
         if (nearDuplicateActive || contextActive) {
@@ -237,13 +246,51 @@ const App = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [nearDuplicateActive, contextActive]);
 
+    const fetchContextImageUris = async (uri, value) => {
+        setContextLoading(true);
+        setContextError(null);
+        setContextImageUris([]);
+        setShowContextOverlay(true);
+
+        const contextQuery = getSparqlQuery(true, uri, value);
+
+        try {
+            addLogEntry({ type: 'query', timestamp: new Date().toISOString(), query: contextQuery });
+            const bindings = await executeSparqlQuery(contextQuery);
+            const uris = bindings
+                .map(binding => ({
+                    uri: binding.img?.value,
+                    id: binding.id?.value,
+                    day: binding.day?.value
+                }))
+                .filter(obj => obj.uri);
+            setContextImageUris(uris);
+            addLogEntry({ type: 'results', timestamp: new Date().toISOString(), results: uris });
+        } catch (err) {
+            console.error('Error fetching context image data:', err);
+            setContextError(`Failed to fetch context data: ${err.message}`);
+        } finally {
+            setContextLoading(false);
+        }
+    };
+
     // Store the latest SPARQL query for live display
     const [liveSparqlQuery, setLiveSparqlQuery] = useState('');
 
     // Update the live SPARQL query
     useEffect(() => {
-        setLiveSparqlQuery(getSparqlQuery());
-    }, [selectedTags, selectedCountry, selectedCity, selectedLocation, includeStartDay, includeEndDay, startDate, endDate, selectedWeekdays, selectedYears, queryMode, selectedMonths, selectedCategories, groupByDay, includeStartTime, includeEndTime, startTime, endTime, selectedCaption, clipSimilarityText, clipSimilarityThreshold, selectedOcr, knnActive, nearDuplicateActive, contextActive, contextUri, contextValue]);
+        const query = getSparqlQuery();
+        //console.log(query);
+        setLiveSparqlQuery(query);
+    }, [selectedTags, selectedCountry, selectedCity, selectedLocation, includeStartDay, includeEndDay, startDate, endDate, selectedWeekdays, selectedYears, queryMode, selectedMonths, selectedCategories, groupByDay, includeStartTime, includeEndTime, startTime, endTime, selectedCaption, clipSimilarityText, clipSimilarityK, selectedOcr, knnActive, nearDuplicateActive, contextActive, contextUri, contextValue]);
+
+    useEffect(() => {
+        if (knnActive) {
+            const query = getSparqlQuery();
+            console.log(query);
+            setLiveSparqlQuery(query);
+        }
+    }, [knnValue]);
 
     // Fetch min/max day from SPARQL endpoint on mount or when forceFetchDayRange changes
     useEffect(() => {
@@ -328,13 +375,13 @@ const App = () => {
     };
 
     // context filter block
-    const getContextBlock = () => {
-        if (contextActive && contextUri) {
+    const getContextBlock = (useContext, uri, value) => {
+        if (useContext && uri) {
             return [
                 '  {',
-                `    <${contextUri}> lsc:ordinal ?ordinal .`,
+                `    <${uri}> lsc:ordinal ?ordinal .`,
                 '    ?img lsc:ordinal ?ord .',
-                `    BIND (${contextValue} AS ?n)`,
+                `    BIND (${value} AS ?n)`,
                 '    FILTER ((?ord >= (?ordinal - ?n)) && (?ord <= (?ordinal + ?n)))',
                 '  }'
             ].filter(Boolean).join('\n');
@@ -343,7 +390,24 @@ const App = () => {
     };
 
     // Main SPARQL query builder
-    const getSparqlQuery = () => {
+    const getSparqlQuery = (isContextQuery = false, contextUriForQuery = null, contextValueForQuery = null) => {
+        if (isContextQuery) {
+            const prefixes = [];
+            pushUnique(prefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
+            const contextBlock = getContextBlock(true, contextUriForQuery, contextValueForQuery);
+            return [
+                ...prefixes,
+                '',
+                'SELECT DISTINCT ?img ?id ?day',
+                'WHERE {',
+                '  ?img lsc:id ?id .',
+                '  ?img lsc:day ?day .',
+                contextBlock,
+                '}',
+                'ORDER BY ?id'
+            ].join('\n');
+        }
+
         if (
             selectedTags.length === 0 &&
             !selectedCountry &&
@@ -368,6 +432,7 @@ const App = () => {
         }
         let whereClauses = [];
         let prefixes = [];
+        let endClauses = [];
         // Insert KNN block at the top of WHERE if active
         const knnBlock = getKnnBlock();
         if (knnActive && knnReplaceMode && knnBlock) {
@@ -394,7 +459,7 @@ const App = () => {
             }
         }
         if (contextActive && contextUri) {
-            const contextBlock = getContextBlock();
+            const contextBlock = getContextBlock(contextActive, contextUri, contextValue);
             if (contextBlock) {
                 whereClauses.push(contextBlock);
                 pushUnique(prefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
@@ -443,9 +508,10 @@ const App = () => {
                 whereClauses.push(...ocrClauses);
                 ocrPrefixes.forEach(p => pushUnique(prefixes, p));
             } else if (type === 'clip') {
-                const { similarityClauses, similarityPrefixes } = getClipSimilarityBlock(clipSimilarityText, clipSimilarityThreshold, pushUnique);
+                const { similarityClauses, similarityPrefixes, similarityEndblock } = getClipSimilarityBlock(clipSimilarityText, clipSimilarityK, pushUnique);
                 whereClauses.push(...similarityClauses);
                 similarityPrefixes.forEach(p => pushUnique(prefixes, p));
+                endClauses.push(...similarityEndblock);
             }
         });
         // Only add the day triple if groupByDay is true and it is not already present from the date block
@@ -457,6 +523,7 @@ const App = () => {
         prefixes = prefixes.sort((a, b) => a.localeCompare(b));
         // Select clause depends on groupByDay
         const selectClause = groupByDay ? 'SELECT DISTINCT ?img ?id ?day' : 'SELECT DISTINCT ?img ?id';
+        endClauses.length === 0 && (endClauses = ['ORDER BY ?id']);
         return [
             ...prefixes,
             '',
@@ -465,7 +532,7 @@ const App = () => {
             '  ?img lsc:id ?id .',
             whereClauses.join('\n'),
             '}',
-            'ORDER BY ?id',
+            endClauses.join('\n'),
         ].join('\n');
     };
 
@@ -522,17 +589,37 @@ const App = () => {
     }, [forceFetchLocations]);
 
     // Handler for URI overlay
-    const handleImageClick = (e, image) => {
+    const handleImageClick = (e, image, isContext = false) => {
         if (e.ctrlKey) {
             submitImage(submissionApi, dresSession, activeRun, image.id);
         } else {
+            if (isContext) {
+                setOverlayImageSource(contextImageUris);
+            } else {
+                setOverlayImageSource(imageUris);
+            }
             setOverlayImageUrl(image.uri);
+            setIsFromContextOverlay(isContext);
         }
     };
 
     // Handler for closing the overlay
     const handleCloseOverlay = () => {
         setOverlayImageUrl(null);
+        setOverlayImageSource([]);
+        setIsFromContextOverlay(false);
+    };
+
+    const handleOpenContextOverlay = (uri, value) => {
+        setContextUri(uri);
+        fetchContextImageUris(uri, value);
+    };
+
+    const handleCloseContextOverlay = () => {
+        setShowContextOverlay(false);
+        setContextImageUris([]);
+        setContextError(null);
+        setContextUri(null);
     };
 
     // Handler for search button click
@@ -601,12 +688,12 @@ const App = () => {
     const [fullscreenResults, setFullscreenResults] = useState(false);
 
     // Find the index of the current image in the list
-    const currentIndex = imageUris.findIndex(obj => obj.uri === overlayImageUrl);
+    const currentIndex = overlayImageSource.findIndex(obj => obj.uri === overlayImageUrl);
     const showPrevImage = () => {
-        if (currentIndex > 0) setOverlayImageUrl(imageUris[currentIndex - 1].uri);
+        if (currentIndex > 0) setOverlayImageUrl(overlayImageSource[currentIndex - 1].uri);
     };
     const showNextImage = () => {
-        if (currentIndex < imageUris.length - 1) setOverlayImageUrl(imageUris[currentIndex + 1].uri);
+        if (currentIndex < overlayImageSource.length - 1) setOverlayImageUrl(overlayImageSource[currentIndex + 1].uri);
     };
     // Keyboard navigation for modal
     useEffect(() => {
@@ -618,7 +705,7 @@ const App = () => {
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [overlayImageUrl, currentIndex, imageUris]);
+    }, [overlayImageUrl, currentIndex, overlayImageSource]);
 
     return (
         <div className="min-h-screen bg-gray-100 flex flex-col items-center p-4 font-inter">
@@ -742,8 +829,8 @@ const App = () => {
                                 setSelectedCaption,
                                 clipSimilarityText,
                                 setClipSimilarityText,
-                                clipSimilarityThreshold,
-                                setClipSimilarityThreshold,
+                                clipSimilarityK,
+                                setClipSimilarityK,
                                 contextActive,
                                 setContextActive,
                                 contextUri,
@@ -842,7 +929,7 @@ const App = () => {
             {/* Image Overlay */}
             <ResultOverlay
                 overlayImageUrl={overlayImageUrl}
-                imageUris={imageUris}
+                imageUris={overlayImageSource}
                 handleCloseOverlay={handleCloseOverlay}
                 setKnnActive={setKnnActive}
                 setKnnUri={setKnnUri}
@@ -855,13 +942,23 @@ const App = () => {
                 showPrevImage={showPrevImage}
                 showNextImage={showNextImage}
                 currentIndex={currentIndex}
-                setContextActive={setContextActive}
-                setContextUri={setContextUri}
+                onOpenContextOverlay={handleOpenContextOverlay}
                 contextValue={contextValue}
                 setContextValue={setContextValue}
                 submissionApi={submissionApi}
                 dresSession={dresSession}
                 activeRun={activeRun}
+                isFromContext={isFromContextOverlay}
+            />
+            <ContextOverlay
+                show={showContextOverlay}
+                onClose={handleCloseContextOverlay}
+                images={contextImageUris}
+                loading={contextLoading}
+                error={contextError}
+                handleImageClick={handleImageClick}
+                configuredImagesPerRow={imagesPerRow}
+                contextUri={contextUri}
             />
         </div>
     );

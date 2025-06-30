@@ -16,19 +16,19 @@ const ResultOverlay = ({
     showPrevImage,
     showNextImage,
     currentIndex,
-    setContextActive,
-    setContextUri,
+    onOpenContextOverlay,
     contextValue,
     setContextValue,
     submissionApi,
     dresSession,
     activeRun,
+    isFromContext,
 }) => {
     if (!overlayImageUrl) return null;
-    const currentObj = imageUris.find(obj => obj.uri === overlayImageUrl);
+    const currentObj = imageUris.find(obj => obj.uri === overlayImageUrl) || {};
     return (
         <div
-            className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 bg-black bg-opacity-75 z-[60] flex items-center justify-center"
             onClick={handleCloseOverlay}
         >
             <div className="relative bg-white p-4 rounded-lg shadow-2xl max-w-5xl max-h-full overflow-hidden flex flex-col items-center" onClick={e => e.stopPropagation()}>
@@ -106,12 +106,11 @@ const ResultOverlay = ({
                                     className="ml-4 px-3 py-1 rounded bg-orange-600 text-white text-xs font-semibold shadow hover:bg-orange-700 transition"
                                     style={{ minWidth: 0,  }}
                                     onClick={() => {
-                                        setContextActive(false);
-                                        setContextActive(true);
-                                        setContextUri(overlayImageUrl);
+                                        onOpenContextOverlay(overlayImageUrl, contextValue);
                                         handleCloseOverlay();
                                     }}
                                     title="Show context for this image"
+                                    //disabled={isFromContext}
                                 >
                                     Context
                                 </button>
@@ -124,6 +123,7 @@ const ResultOverlay = ({
                                     onChange={e => setContextValue(Math.max(1, Math.min(500, parseInt(e.target.value)) || 1))}
                                     className="w-16 px-2 py-1 border rounded text-sm"
                                     title="n"
+                                    //disabled={isFromContext}
                                 />
                             </div>
                         </div>
@@ -153,11 +153,12 @@ const ResultOverlay = ({
 
                     {/* Right: DRES Submission */}
                     <div className="flex flex-row items-center justify-end gap-2" style={{ width: 320 }}>
-                        <DresSubmission
+                         <DresSubmission
                             submissionApi={submissionApi}
                             dresSession={dresSession}
                             activeRun={activeRun}
                             imageId={currentObj.id}
+                            disabled={!currentObj.id}
                         />
                     </div>
                 </div>

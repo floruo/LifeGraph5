@@ -17,6 +17,7 @@ const ResultDisplay = ({
 }) => {
   const [imagesPerRow, setImagesPerRow] = React.useState(configuredImagesPerRow);
   const [fullscreen, setFullscreen] = React.useState(false);
+  const [openPanels, setOpenPanels] = React.useState({});
 
   // Helper to group imageUris by year, month, day (with correct ordering)
   function groupByYearMonthDay(imageUris) {
@@ -196,12 +197,61 @@ const ResultDisplay = ({
           (() => {
             const groups = groupByYearMonthDay(imageUris);
             const years = Object.keys(groups);
+
+            const handleToggle = (e, key) => {
+              const isShiftClick = e.shiftKey;
+              setOpenPanels(prev => {
+                const newOpenPanels = { ...prev };
+                const isOpen = !!prev[key];
+                const newOpenState = !isOpen;
+                newOpenPanels[key] = newOpenState;
+
+                if (isShiftClick) {
+                  const parts = key.split('-');
+                  const stateToApply = isOpen ? false : true;
+
+                  const setChildrenState = (currentKey, level) => {
+                    const currentParts = currentKey.split('-');
+                    if (level === 1) { // Year -> set months and days
+                      const year = currentParts[0];
+                      if (groups[year]) {
+                        Object.keys(groups[year]).forEach(month => {
+                          newOpenPanels[`${year}-${month}`] = stateToApply;
+                          if (groups[year][month]) {
+                            Object.keys(groups[year][month]).forEach(day => {
+                              newOpenPanels[`${year}-${month}-${day}`] = stateToApply;
+                            });
+                          }
+                        });
+                      }
+                    } else if (level === 2) { // Month -> set days
+                      const [year, month] = currentParts;
+                      if (groups[year] && groups[year][month]) {
+                        Object.keys(groups[year][month]).forEach(day => {
+                          newOpenPanels[`${year}-${month}-${day}`] = stateToApply;
+                        });
+                      }
+                    }
+                  };
+
+                  setChildrenState(key, parts.length);
+                }
+                return newOpenPanels;
+              });
+            };
+
             // Helper to render days
-            const renderDays = (daysObj) => {
+            const renderDays = (daysObj, year, month) => {
               const days = Object.keys(daysObj);
               if (days.length > 1) {
                 return days.map(day => (
-                  <CollapsiblePanel key={day} title={day} defaultOpen={false} className="w-full !max-w-none">
+                  <CollapsiblePanel
+                    key={day}
+                    title={day}
+                    open={openPanels[`${year}-${month}-${day}`] || false}
+                    onToggle={(e) => handleToggle(e, `${year}-${month}-${day}`)}
+                    className="w-full !max-w-none"
+                  >
                     <div className={`w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-${imagesPerRow} gap-4`}>
                       {daysObj[day].map((obj, index) => (
                         <div
@@ -244,7 +294,7 @@ const ResultDisplay = ({
               }
             };
             // Helper to render months
-            const renderMonths = (monthsObj) => {
+            const renderMonths = (monthsObj, year) => {
               // Sort months as numbers if possible, fallback to string
               const months = Object.keys(monthsObj).sort((a, b) => {
                 // Try to parse as month (01-12)
@@ -257,12 +307,18 @@ const ResultDisplay = ({
               });
               if (months.length > 1) {
                 return months.map(month => (
-                  <CollapsiblePanel key={month} title={month} defaultOpen={false} className="w-full !max-w-none">
-                    {renderDays(monthsObj[month])}
+                  <CollapsiblePanel
+                    key={month}
+                    title={month}
+                    open={openPanels[`${year}-${month}`] || false}
+                    onToggle={(e) => handleToggle(e, `${year}-${month}`)}
+                    className="w-full !max-w-none"
+                  >
+                    {renderDays(monthsObj[month], year, month)}
                   </CollapsiblePanel>
                 ));
               } else if (months.length === 1) {
-                return renderDays(monthsObj[months[0]]);
+                return renderDays(monthsObj[months[0]], year, months[0]);
               } else {
                 return null;
               }
@@ -270,12 +326,18 @@ const ResultDisplay = ({
             // Render years
             if (years.length > 1) {
               return years.map(year => (
-                <CollapsiblePanel key={year} title={year} defaultOpen={false} className="w-full !max-w-none">
-                  {renderMonths(groups[year])}
+                <CollapsiblePanel
+                  key={year}
+                  title={year}
+                  open={openPanels[year] || false}
+                  onToggle={(e) => handleToggle(e, year)}
+                  className="w-full !max-w-none"
+                >
+                  {renderMonths(groups[year], year)}
                 </CollapsiblePanel>
               ));
             } else if (years.length === 1) {
-              return renderMonths(groups[years[0]]);
+              return renderMonths(groups[years[0]], years[0]);
             } else {
               return null;
             }
@@ -299,7 +361,7 @@ const ResultDisplay = ({
           </div>
         )
       ) : (
-        (selectedTags.length > 0 && triggerFetch > 0) ? (
+        (triggerFetch > 0) ? (
           <span></span>
         ) : null
       )}

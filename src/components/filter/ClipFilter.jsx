@@ -3,9 +3,10 @@
 import React from "react";
 
 
-export const getClipSimilarityBlock = (clipSimilarityText, clipSimilarityThreshold, pushUnique) => {
+export const getClipSimilarityBlock = (clipSimilarityText, clipSimilarityK, pushUnique) => {
     let similarityClauses = [];
     let similarityPrefixes = [];
+    let similarityEndblock = [];
     if (clipSimilarityText) {
         pushUnique(similarityPrefixes, 'PREFIX megras: <http://megras.org/sparql#>');
         pushUnique(similarityPrefixes, 'PREFIX derived: <http://megras.org/derived/>');
@@ -13,14 +14,16 @@ export const getClipSimilarityBlock = (clipSimilarityText, clipSimilarityThresho
         similarityClauses.push(`  {`);
         similarityClauses.push(`    BIND (megras:CLIP_TEXT(\"${clipSimilarityText.replace(/\"/g, '\\\"')}\") as ?textVec)`);
         similarityClauses.push(`    ?img derived:clipEmbedding ?clipVec .`);
-        similarityClauses.push(`    FILTER (megras:COSINE_SIM(?textVec, ?clipVec) > ${clipSimilarityThreshold})`);
+        similarityClauses.push(`    BIND (megras:COSINE_SIM(?textVec, ?clipVec) as ?cosSim)`);
         similarityClauses.push(`  }`);
+        similarityEndblock.push(`ORDER BY DESC(?cosSim) ?id`);
+        similarityEndblock.push(`LIMIT ${clipSimilarityK}`);
     }
-    return { similarityClauses, similarityPrefixes };
+    return { similarityClauses, similarityPrefixes, similarityEndblock };
 };
 
 // Clip Similarity Filter Component
-const ClipFilter = ({ clipSimilarityText, setClipSimilarityText, clipSimilarityThreshold = 0.8, setClipSimilarityThreshold, loading }) => (
+const ClipFilter = ({ clipSimilarityText, setClipSimilarityText, clipSimilarityK = 5, setClipSimilarityK, loading }) => (
     <div className="w-full flex flex-col gap-2 mb-2">
         <div className="flex flex-row items-center gap-2">
             <input
@@ -33,17 +36,17 @@ const ClipFilter = ({ clipSimilarityText, setClipSimilarityText, clipSimilarityT
             />
         </div>
         <div className="flex flex-row items-center gap-2 w-full">
-            <span className="text-xs text-gray-500 whitespace-nowrap">Threshold</span>
+            <span className="text-xs text-gray-500 whitespace-nowrap">K</span>
             <input
                 type="number"
-                min={0}
-                max={1}
-                step={0.01}
+                min={1}
+                max={500}
+                step={1}
                 className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
-                value={clipSimilarityThreshold}
-                onChange={e => setClipSimilarityThreshold && setClipSimilarityThreshold(Number(e.target.value) > 1 ? 1 : Number(e.target.value) < 0 ? 0 : Number(e.target.value))}
+                value={clipSimilarityK}
+                onChange={e => setClipSimilarityK && setClipSimilarityK(Number(e.target.value) > 500 ? 500 : Number(e.target.value) < 1 ? 1 : Number(e.target.value))}
                 //disabled={loading}
-                title="Similarity threshold (0-1)"
+                title="K for CLIP NN"
             />
             <div className="flex-1" />
             <button
