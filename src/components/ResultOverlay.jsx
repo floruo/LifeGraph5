@@ -61,6 +61,7 @@ const ResultOverlay = ({
                                 style={{ minWidth: 0 }}
                                 onClick={() => {
                                     setKnnActive(true);
+                                    setKnnUri(overlayImageUrl);
                                     handleCloseOverlay();
                                 }}
                                 title="Add KNN block to query"

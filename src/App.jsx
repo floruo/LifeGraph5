@@ -279,8 +279,18 @@ const App = () => {
 
     // Update the live SPARQL query
     useEffect(() => {
-        setLiveSparqlQuery(getSparqlQuery());
+        const query = getSparqlQuery();
+        //console.log(query);
+        setLiveSparqlQuery(query);
     }, [selectedTags, selectedCountry, selectedCity, selectedLocation, includeStartDay, includeEndDay, startDate, endDate, selectedWeekdays, selectedYears, queryMode, selectedMonths, selectedCategories, groupByDay, includeStartTime, includeEndTime, startTime, endTime, selectedCaption, clipSimilarityText, clipSimilarityK, selectedOcr, knnActive, nearDuplicateActive, contextActive, contextUri, contextValue]);
+
+    useEffect(() => {
+        if (knnActive) {
+            const query = getSparqlQuery();
+            console.log(query);
+            setLiveSparqlQuery(query);
+        }
+    }, [knnValue]);
 
     // Fetch min/max day from SPARQL endpoint on mount or when forceFetchDayRange changes
     useEffect(() => {
