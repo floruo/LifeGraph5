@@ -3,7 +3,7 @@ import React from "react";
 const CategorySelector = ({
   selectedCategories,
   setSelectedCategories,
-  loading,
+  loadingCategories,
   allCategories,
   fetchAllCategories,
 }) => {
@@ -49,7 +49,7 @@ const CategorySelector = ({
         <button
           className="px-3 py-1 bg-gray-200 text-gray-700 rounded shadow hover:bg-gray-300 transition text-xs"
           onClick={handleRefreshCategories}
-          disabled={loading}
+          disabled={loadingCategories}
           type="button"
         >
           Refresh Categories
@@ -63,7 +63,7 @@ const CategorySelector = ({
           Clear Categories
         </button>
       </div>
-      {loading ? (
+      {loadingCategories ? (
         <div className="mb-4 w-full text-xs text-gray-400 text-left">Loading ...</div>
       ) : (
         <>
@@ -75,7 +75,6 @@ const CategorySelector = ({
               placeholder="Type to search or select categories"
               value={categorySearch}
               onChange={handleCategorySearchChange}
-              disabled={loading}
               autoComplete="off"
             />
             <div
