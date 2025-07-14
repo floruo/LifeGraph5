@@ -32,7 +32,7 @@ Thumbs.db # Windows files
 .env.*.local
 
 # Local configuration files
-#src/config.local.json
+src/config.local.json
 
 # npm/yarn specific files
 package-lock.json
