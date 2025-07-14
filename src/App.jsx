@@ -79,14 +79,14 @@ const App = () => {
     // Country selector state
     const [allCountries, setAllCountries] = useState([]);
     const [loadingCountries, setLoadingCountries] = useState(true);
-    const [selectedCountry, setSelectedCountry] = useState('');
+    const [selectedCountries, setSelectedCountries] = useState([]); // <-- now array
     const [countrySearch, setCountrySearch] = useState('');
     const [forceFetchCountries, setForceFetchCountries] = useState(false);
 
     // City selector state
     const [allCities, setAllCities] = useState([]);
     const [loadingCities, setLoadingCities] = useState(true);
-    const [selectedCity, setSelectedCity] = useState('');
+    const [selectedCities, setSelectedCities] = useState([]); // <-- now array
     const [citySearch, setCitySearch] = useState('');
     const [forceFetchCities, setForceFetchCities] = useState(false);
 
@@ -99,7 +99,7 @@ const App = () => {
     // Location selector state
     const [allLocations, setAllLocations] = useState([]);
     const [loadingLocations, setLoadingLocations] = useState(true);
-    const [selectedLocation, setSelectedLocation] = useState('');
+    const [selectedLocations, setSelectedLocations] = useState([]); // <-- now array
     const [locationSearch, setLocationSearch] = useState('');
     const [forceFetchLocations, setForceFetchLocations] = useState(false);
 
@@ -207,12 +207,12 @@ const App = () => {
     useEffect(() => {
         if (nearDuplicateActive || contextActive) {
             setSelectedTags([]);
-            setSelectedCountry('');
+            setSelectedCountries([]);
             setTagSearch('');
             setCountrySearch('');
             setCitySearch('');
-            setSelectedCity('');
-            setSelectedLocation('');
+            setSelectedCities([]);
+            setSelectedLocations([]);
             setStartDate(minDate);
             setEndDate(maxDate);
             setIncludeStartDay(false);
@@ -297,7 +297,7 @@ const App = () => {
         const query = getSparqlQuery();
         //console.log(query);
         setLiveSparqlQuery(query);
-    }, [selectedTags, selectedCountry, selectedCity, selectedLocation, includeStartDay, includeEndDay, startDate, endDate, selectedWeekdays, selectedYears, queryMode, selectedMonths, selectedCategories, groupByDay, includeStartTime, includeEndTime, startTime, endTime, selectedCaption, clipSimilarityText, clipSimilarityK, selectedOcr, knnActive, nearDuplicateActive, contextActive, contextUri, contextValue]);
+    }, [selectedTags, selectedCountries, selectedCities, selectedLocations, includeStartDay, includeEndDay, startDate, endDate, selectedWeekdays, selectedYears, queryMode, selectedMonths, selectedCategories, groupByDay, includeStartTime, includeEndTime, startTime, endTime, selectedCaption, clipSimilarityText, clipSimilarityK, selectedOcr, knnActive, nearDuplicateActive, contextActive, contextUri, contextValue]);
 
     useEffect(() => {
         if (knnActive) {
@@ -425,8 +425,8 @@ const App = () => {
 
         if (
             selectedTags.length === 0 &&
-            !selectedCountry &&
-            !selectedCity &&
+            selectedCountries.length === 0 &&
+            selectedCities.length === 0 &&
             !includeStartDay &&
             !includeEndDay &&
             selectedWeekdays.length === 0 &&
@@ -435,7 +435,7 @@ const App = () => {
             selectedCategories.length === 0 &&
             !includeStartTime &&
             !includeEndTime &&
-            !selectedLocation &&
+            selectedLocations.length === 0 &&
             !selectedCaption &&
             !selectedOcr &&
             !knnActive &&
@@ -491,15 +491,15 @@ const App = () => {
                 whereClauses.push(...tagClauses);
                 tagPrefixes.forEach(p => pushUnique(prefixes, p));
             } else if (type === 'country') {
-                const { countryClauses, countryPrefixes } = getCountryBlock(selectedCountry, pushUnique);
+                const { countryClauses, countryPrefixes } = getCountryBlock(selectedCountries, pushUnique);
                 whereClauses.push(...countryClauses);
                 countryPrefixes.forEach(p => pushUnique(prefixes, p));
             } else if (type === 'city') {
-                const { cityClauses, cityPrefixes } = getCityBlock(selectedCity, pushUnique);
+                const { cityClauses, cityPrefixes } = getCityBlock(selectedCities, pushUnique);
                 whereClauses.push(...cityClauses);
                 cityPrefixes.forEach(p => pushUnique(prefixes, p));
             } else if (type === 'location') {
-                const { locationClauses, locationPrefixes } = getLocationBlock(selectedLocation, pushUnique);
+                const { locationClauses, locationPrefixes } = getLocationBlock(selectedLocations, pushUnique);
                 whereClauses.push(...locationClauses);
                 locationPrefixes.forEach(p => pushUnique(prefixes, p));
             } else if (type === 'date') {
@@ -653,12 +653,12 @@ const App = () => {
     // Add a handler to clear all query filters
     const handleClearFilters = () => {
         setSelectedTags([]);
-        setSelectedCountry('');
+        setSelectedCountries([]);
         setTagSearch('');
         setCountrySearch('');
         setCitySearch('');
-        setSelectedCity('');
-        setSelectedLocation('');
+        setSelectedCities([]);
+        setSelectedLocations([]);
         setStartDate(minDate);
         setEndDate(maxDate);
         setIncludeStartDay(false);
@@ -771,8 +771,8 @@ const App = () => {
                                 allCountries,
                                 loadingCountries,
                                 setLoadingCountries,
-                                selectedCountry,
-                                setSelectedCountry,
+                                selectedCountries,
+                                setSelectedCountries,
                                 countrySearch,
                                 setCountrySearch,
                                 forceFetchCountries,
@@ -780,8 +780,8 @@ const App = () => {
                                 allCities,
                                 loadingCities,
                                 setLoadingCities,
-                                selectedCity,
-                                setSelectedCity,
+                                selectedCities,
+                                setSelectedCities,
                                 citySearch,
                                 setCitySearch,
                                 forceFetchCities,
@@ -792,8 +792,8 @@ const App = () => {
                                 setSelectedCategories,
                                 forceFetchCategories,
                                 setForceFetchCategories,
-                                selectedLocation,
-                                setSelectedLocation,
+                                selectedLocations,
+                                setSelectedLocations,
                                 locationSearch,
                                 setLocationSearch,
                                 loadingLocations,

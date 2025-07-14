@@ -1,36 +1,40 @@
 import React from 'react';
 
 const CountrySelector = ({
-    selectedCountry, setSelectedCountry, loadingCountries, setLoadingCountries, allCountries, setAllCountries, countrySearch, setCountrySearch, fetchAllCountries
+    selectedCountries, setSelectedCountries, loadingCountries, allCountries, countrySearch, setCountrySearch, fetchAllCountries
 }) => {
-
     const handleCountrySearchChange = (event) => {
         setCountrySearch(event.target.value);
     };
 
     const handleCountrySelect = (countryValue) => {
-        setSelectedCountry(countryValue);
+        const selectedLower = countryValue.toLowerCase();
+        if (selectedCountries.map((c) => c.toLowerCase()).includes(selectedLower)) {
+            setSelectedCountries(selectedCountries.filter((c) => c.toLowerCase() !== selectedLower));
+        } else {
+            setSelectedCountries([...selectedCountries, countryValue]);
+        }
         setCountrySearch('');
     };
 
-    const handleRemoveCountry = () => {
-        setSelectedCountry('');
+    const handleRemoveCountry = (countryToRemove) => {
+        setSelectedCountries(selectedCountries.filter((c) => c !== countryToRemove));
     };
 
-    const handleClearCountry = () => {
-        setSelectedCountry('');
+    const handleClearCountries = () => {
+        setSelectedCountries([]);
     };
 
     const handleRefreshCountries = () => {
-        setSelectedCountry(''); // Clear selected country on refresh
+        setSelectedCountries([]);
         fetchAllCountries(true);
     };
 
-    const filteredCountries = allCountries.filter(
+    const filteredCountries = allCountries && Array.isArray(allCountries) ? allCountries.filter(
         c =>
             c.toLowerCase().includes(countrySearch.toLowerCase()) &&
-            c !== selectedCountry
-    );
+            !selectedCountries.map((sc) => sc.toLowerCase()).includes(c.toLowerCase())
+    ) : [];
 
     return (
         <>
@@ -46,11 +50,11 @@ const CountrySelector = ({
                 </button>
                 <button
                     className="px-2 py-1 bg-red-100 text-red-700 rounded shadow hover:bg-red-200 transition text-xs"
-                    onClick={handleClearCountry}
+                    onClick={handleClearCountries}
                     type="button"
-                    title="Clear country"
+                    title="Clear countries"
                 >
-                    Clear Country
+                    Clear Countries
                 </button>
             </div>
             {loadingCountries ? (
@@ -81,7 +85,7 @@ const CountrySelector = ({
                                         className="p-3 cursor-pointer hover:bg-blue-100 flex items-center"
                                         onClick={() => handleCountrySelect(c)}
                                     >
-                                        {selectedCountry === c ? (
+                                        {selectedCountries.map((sc) => sc.toLowerCase()).includes(c.toLowerCase()) ? (
                                             <span className="mr-2 text-green-600">✔</span>
                                         ) : null}
                                         {c}
@@ -90,26 +94,29 @@ const CountrySelector = ({
                             )}
                         </div>
                     </div>
-                    {/* Display selected country */}
-                    {selectedCountry && (
-                        <div className="mb-4 flex flex-wrap gap-2 items-center">
+                    {/* Display selected countries */}
+                    <div className="mb-4 w-full flex flex-col">
+                        <div className="flex flex-row justify-between items-start w-full">
                             <div className="flex flex-wrap gap-2 flex-1">
-                                <span
-                                    className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs flex items-center"
-                                >
-                                    {selectedCountry}
-                                    <button
-                                        className="ml-2 text-blue-500 hover:text-red-600 font-bold"
-                                        onClick={handleRemoveCountry}
-                                        title="Remove country"
-                                        type="button"
+                                {selectedCountries.map((c, idx) => (
+                                    <span
+                                        key={c + idx}
+                                        className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs flex items-center"
                                     >
-                                        &times;
-                                    </button>
-                                </span>
+                                        {c}
+                                        <button
+                                            className="ml-2 text-blue-500 hover:text-red-600 font-bold"
+                                            onClick={() => handleRemoveCountry(c)}
+                                            title="Remove country"
+                                            type="button"
+                                        >
+                                            &times;
+                                        </button>
+                                    </span>
+                                ))}
                             </div>
                         </div>
-                    )}
+                    </div>
                 </>
             ) : null}
         </>
@@ -117,12 +124,15 @@ const CountrySelector = ({
 };
 
 // Returns SPARQL country filter block and prefixes
-export const getCountryBlock = (selectedCountry, pushUnique) => {
+export const getCountryBlock = (selectedCountries, pushUnique) => {
     let countryClauses = [];
     let countryPrefixes = [];
-    if (selectedCountry) {
+    if (selectedCountries.length) {
         pushUnique(countryPrefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
-        countryClauses.push(`  {\n    ?img lsc:country \"${selectedCountry.replace(/\"/g, '\\"')}\" .\n  }`);
+        const unionFilters = selectedCountries
+            .map(country => `    { ?img lsc:country "${country.replace(/"/g, '\"')}" . }`)
+            .join('\n    UNION\n');
+        countryClauses.push(`  {\n${unionFilters}\n  }`);
     }
     return { countryClauses, countryPrefixes };
 };

@@ -1,35 +1,40 @@
 import React from 'react';
 
 const CitySelector = ({
-    selectedCity, setSelectedCity, loadingCities, setLoadingCities, allCities, setAllCities, citySearch, setCitySearch, fetchAllCities
+    selectedCities, setSelectedCities, loadingCities, allCities, citySearch, setCitySearch, fetchAllCities
 }) => {
-
     const handleCitySearchChange = (event) => {
         setCitySearch(event.target.value);
     };
 
     const handleCitySelect = (cityValue) => {
-        setSelectedCity(cityValue);
+        const selectedLower = cityValue.toLowerCase();
+        if (selectedCities.map((c) => c.toLowerCase()).includes(selectedLower)) {
+            setSelectedCities(selectedCities.filter((c) => c.toLowerCase() !== selectedLower));
+        } else {
+            setSelectedCities([...selectedCities, cityValue]);
+        }
         setCitySearch('');
     };
 
-    const handleRemoveCity = () => {
-        setSelectedCity('');
+    const handleRemoveCity = (cityToRemove) => {
+        setSelectedCities(selectedCities.filter((c) => c !== cityToRemove));
     };
 
-    const handleClearCity = () => {
-        setSelectedCity('');
+    const handleClearCities = () => {
+        setSelectedCities([]);
     };
 
     const handleRefreshCities = () => {
-        fetchAllCities(true); // Force refresh, bypass cache
+        setSelectedCities([]);
+        fetchAllCities(true);
     };
 
-    const filteredCities = allCities.filter(
+    const filteredCities = allCities && Array.isArray(allCities) ? allCities.filter(
         c =>
             c.toLowerCase().includes(citySearch.toLowerCase()) &&
-            c !== selectedCity
-    );
+            !selectedCities.map((sc) => sc.toLowerCase()).includes(c.toLowerCase())
+    ) : [];
 
     return (
         <>
@@ -45,11 +50,11 @@ const CitySelector = ({
                 </button>
                 <button
                     className="px-2 py-1 bg-red-100 text-red-700 rounded shadow hover:bg-red-200 transition text-xs"
-                    onClick={handleClearCity}
+                    onClick={handleClearCities}
                     type="button"
-                    title="Clear city"
+                    title="Clear cities"
                 >
-                    Clear City
+                    Clear Cities
                 </button>
             </div>
             {loadingCities ? (
@@ -79,7 +84,7 @@ const CitySelector = ({
                                         className="p-3 cursor-pointer hover:bg-blue-100 flex items-center"
                                         onClick={() => handleCitySelect(c)}
                                     >
-                                        {selectedCity === c ? (
+                                        {selectedCities.map((sc) => sc.toLowerCase()).includes(c.toLowerCase()) ? (
                                             <span className="mr-2 text-green-600">✔</span>
                                         ) : null}
                                         {c}
@@ -88,14 +93,29 @@ const CitySelector = ({
                             )}
                         </div>
                     </div>
-                    {/* Display selected city */}
-                    {selectedCity && (
-                        <div className="mb-4 flex flex-wrap gap-2 items-center">
+                    {/* Display selected cities */}
+                    <div className="mb-4 w-full flex flex-col">
+                        <div className="flex flex-row justify-between items-start w-full">
                             <div className="flex flex-wrap gap-2 flex-1">
-                                <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded shadow text-xs">{selectedCity}</span>
+                                {selectedCities.map((c, idx) => (
+                                    <span
+                                        key={c + idx}
+                                        className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs flex items-center"
+                                    >
+                                        {c}
+                                        <button
+                                            className="ml-2 text-blue-500 hover:text-red-600 font-bold"
+                                            onClick={() => handleRemoveCity(c)}
+                                            title="Remove city"
+                                            type="button"
+                                        >
+                                            &times;
+                                        </button>
+                                    </span>
+                                ))}
                             </div>
                         </div>
-                    )}
+                    </div>
                 </>
             )}
         </>
@@ -103,12 +123,15 @@ const CitySelector = ({
 };
 
 // Returns SPARQL city filter block and prefixes
-export const getCityBlock = (selectedCity, pushUnique) => {
+export const getCityBlock = (selectedCities, pushUnique) => {
     let cityClauses = [];
     let cityPrefixes = [];
-    if (selectedCity) {
+    if (selectedCities.length) {
         pushUnique(cityPrefixes, 'PREFIX lsc: <http://lsc.dcu.ie/schema#>');
-        cityClauses.push(`  {\n    ?img lsc:city \"${selectedCity.replace(/\"/g, '\\"')}\" .\n  }`);
+        const unionFilters = selectedCities
+            .map(city => `    { ?img lsc:city "${city.replace(/"/g, '\"')}" . }`)
+            .join('\n    UNION\n');
+        cityClauses.push(`  {\n${unionFilters}\n  }`);
     }
     return { cityClauses, cityPrefixes };
 };
