@@ -252,7 +252,22 @@ const App = () => {
         setContextImageUris([]);
         setShowContextOverlay(true);
 
-        const contextQuery = getSparqlQuery(true, uri, value);
+        //const contextQuery = getSparqlQuery(true, uri, value);
+        const contextQuery = [
+            'PREFIX lsc: <http://lsc.dcu.ie/schema#>',
+            '',
+            'SELECT DISTINCT ?img ?id ?day',
+            'WHERE {',
+            '  ?img lsc:id ?id .',
+            `  <${uri}> lsc:ordinal ?ordinal .`,
+            `  <${uri}> lsc:day ?day .`,
+            '  ?img lsc:day ?day .',
+            '  ?img lsc:ordinal ?ord .',
+            `  BIND (${value} AS ?n)`,
+            '  FILTER ((?ord >= (?ordinal - ?n)) && (?ord <= (?ordinal + ?n)))',
+            '}',
+            'ORDER BY ?id'
+        ].filter(Boolean).join('\n');
 
         try {
             addLogEntry({ type: 'query', timestamp: new Date().toISOString(), query: contextQuery });
