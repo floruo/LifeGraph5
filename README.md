@@ -1,3 +1,5 @@
+![LifeGraph](https://github.com/user-attachments/assets/31c54ac4-0660-488a-900f-13ce18207680)
+
 # LifeGraph 5 Frontend
 
 A React-based frontend for exploring and querying lifelog image data using tags and countries, powered by a SPARQL endpoint.
