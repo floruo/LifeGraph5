@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { LoginRequest, ApiClientSubmission, ApiClientAnswerSet, ApiClientAnswer } from '../openapi/DRES/client/src/index';
-import { DRES_USER, DRES_PASSWORD } from '../config';
+import { DRES_USER, DRES_PASSWORD, DRES_ENABLED } from '../config';
 import { toast } from "react-toastify";
 
 const onSuccess = (data) => {
@@ -13,6 +13,8 @@ const onError = (error) => {
 };
 
 export const submitImage = (submissionApi, session, run, imageId) => {
+    if (!DRES_ENABLED) return;
+
     const answer = new ApiClientAnswer();
     answer.mediaItemName = imageId;
 
@@ -70,6 +72,8 @@ export const DresSubmission = ({ submissionApi, dresSession, activeRun, imageId 
             }
         )
     };
+
+    if (!DRES_ENABLED) return null;
 
     return (
         <div className="flex flex-col gap-2 items-end">
@@ -157,6 +161,8 @@ export const DresLogin = ({ userApi, runInfoApi, dresSession, setDresSession, ac
             }
         );
     }
+
+    if (!DRES_ENABLED) return null;
 
     return (
         <div className="flex flex-col gap-2 max-w-xs w-full">
