@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { DresSubmission } from './DresClient';
 import { fetchImageInfos } from '../utils/sparql';
+import { FILTER_ORDER } from '../config';
 
 const ResultOverlay = ({
     overlayImageUrl,
@@ -24,11 +25,25 @@ const ResultOverlay = ({
     dresSession,
     activeRun,
     isFromContext,
+    onInfoFilterClick,
 }) => {
     const [showInfoOverlay, setShowInfoOverlay] = useState(false);
     const [infoTriples, setInfoTriples] = useState([]);
     const [loadingInfo, setLoadingInfo] = useState(false);
     const [infoError, setInfoError] = useState(null);
+
+    const predicateToFilterType = {
+        'http://lsc.dcu.ie/schema#tag': 'tags',
+        'http://lsc.dcu.ie/schema#category': 'category',
+        'http://lsc.dcu.ie/schema#country': 'country',
+        'http://lsc.dcu.ie/schema#city': 'city',
+        'http://lsc.dcu.ie/schema#location_name': 'location',
+        'http://lsc.dcu.ie/schema#day': 'date',
+        'http://lsc.dcu.ie/schema#caption': 'caption',
+        'http://lsc.dcu.ie/schema#ocr': 'ocr',
+    };
+
+    const clickablePredicates = Object.keys(predicateToFilterType).filter(p => FILTER_ORDER.includes(predicateToFilterType[p]));
 
     const fetchInfos = async () => {
         if (!overlayImageUrl) return;
@@ -48,6 +63,11 @@ const ResultOverlay = ({
         setShowInfoOverlay(false);
         handleCloseOverlay();
     };
+
+    const handleTripleInfoClick = (predicate, object) => {
+        handleCloseAllOverlays();
+        onInfoFilterClick(predicate, object);
+    }
 
     if (!overlayImageUrl) return null;
     const currentObj = imageUris.find(obj => obj.uri === overlayImageUrl) || {};
@@ -215,12 +235,20 @@ const ResultOverlay = ({
                                         {infoTriples.length === 0 ? (
                                             <tr><td colSpan={2}>No info found.</td></tr>
                                         ) : (
-                                            infoTriples.map((triple, idx) => (
-                                                <tr key={idx}>
-                                                    <td className="px-2 py-1 whitespace-nowrap overflow-hidden text-ellipsis" style={{maxWidth: '1px'}}>{triple.p?.value}</td>
-                                                    <td className="px-2 py-1 break-words" style={{wordBreak: 'break-word'}}>{triple.o?.value}</td>
-                                                </tr>
-                                            ))
+                                            infoTriples.map((triple, idx) => {
+                                                const isClickable = clickablePredicates.includes(triple.p?.value);
+                                                return (
+                                                    <tr
+                                                        key={idx}
+                                                        onClick={() => isClickable && handleTripleInfoClick(triple.p.value, triple.o.value)}
+                                                        className={isClickable ? 'cursor-pointer hover:bg-gray-200' : ''}
+                                                        title={isClickable ? `Set filter for ${predicateToFilterType[triple.p.value]}` : ''}
+                                                    >
+                                                        <td className="px-2 py-1 whitespace-nowrap overflow-hidden text-ellipsis" style={{maxWidth: '1px'}}>{triple.p?.value}</td>
+                                                        <td className="px-2 py-1 break-words" style={{wordBreak: 'break-word'}}>{triple.o?.value}</td>
+                                                    </tr>
+                                                );
+                                            })
                                         )}
                                     </tbody>
                                 </table>

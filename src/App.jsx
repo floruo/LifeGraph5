@@ -651,7 +651,7 @@ const App = () => {
     };
 
     // Add a handler to clear all query filters
-    const handleClearFilters = () => {
+    const handleClearFilters = (clearResults = true) => {
         setSelectedTags([]);
         setSelectedCountries([]);
         setTagSearch('');
@@ -668,9 +668,6 @@ const App = () => {
         setSelectedWeekdays([]);
         setWeekdayRange([null, null]);
 
-        setImageUris([]);
-        setError(null);
-        setQueryTime(null);
         setSelectedYears([]);
         setSelectedMonths([]);
         setSelectedCategories([]);
@@ -685,6 +682,41 @@ const App = () => {
         setNearDuplicateActive(false);
         setContextActive(false)
         //setTriggerFetch(0);
+        if (clearResults) {
+            setImageUris([]);
+            setError(null);
+            setQueryTime(null);
+        }
+    };
+
+    const handleInfoFilterClick = (predicate, object) => {
+        handleClearFilters(false); // Clear all existing filters
+
+        const predicateMap = {
+            'http://lsc.dcu.ie/schema#tag': { type: 'tags', setter: setSelectedTags, value: object.replace('http://lsc.dcu.ie/tag#', '') },
+            'http://lsc.dcu.ie/schema#category': { type: 'category', setter: setSelectedCategories, value: object },
+            'http://lsc.dcu.ie/schema#country': { type: 'country', setter: setSelectedCountries, value: object },
+            'http://lsc.dcu.ie/schema#city': { type: 'city', setter: setSelectedCities, value: object },
+            'http://lsc.dcu.ie/schema#location_name': { type: 'location', setter: setSelectedLocations, value: object },
+            'http://lsc.dcu.ie/schema#day': { type: 'date', setter: setStartDate, value: object.replace('http://lsc.dcu.ie/day#', '') },
+            'http://lsc.dcu.ie/schema#caption': { type: 'caption', setter: setSelectedCaption, value: object },
+            'http://lsc.dcu.ie/schema#ocr': { type: 'ocr', setter: setSelectedOcr, value: object }
+        };
+
+        const filter = predicateMap[predicate];
+        if (filter) {
+            if (['tags', 'category', 'country', 'city', 'location'].includes(filter.type)) {
+                filter.setter([filter.value]);
+            } else {
+                filter.setter(filter.value);
+            }
+
+            if (filter.type === 'date') {
+                setIncludeStartDay(true);
+                setEndDate(filter.value); // Also set end date to keep it a single day filter
+                setIncludeEndDay(true);
+            }
+        }
     };
 
     const handleClearLogs = () => {
@@ -964,6 +996,7 @@ const App = () => {
                 dresSession={dresSession}
                 activeRun={activeRun}
                 isFromContext={isFromContextOverlay}
+                onInfoFilterClick={handleInfoFilterClick}
             />
             <ContextOverlay
                 show={showContextOverlay}
