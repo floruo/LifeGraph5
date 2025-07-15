@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { DresSubmission } from './DresClient';
+import { fetchImageInfos } from '../utils/sparql';
 
 const ResultOverlay = ({
     overlayImageUrl,
@@ -24,16 +25,40 @@ const ResultOverlay = ({
     activeRun,
     isFromContext,
 }) => {
+    const [showInfoOverlay, setShowInfoOverlay] = useState(false);
+    const [infoTriples, setInfoTriples] = useState([]);
+    const [loadingInfo, setLoadingInfo] = useState(false);
+    const [infoError, setInfoError] = useState(null);
+
+    const fetchInfos = async () => {
+        if (!overlayImageUrl) return;
+        setLoadingInfo(true);
+        setInfoError(null);
+        try {
+            const triples = await fetchImageInfos(overlayImageUrl);
+            setInfoTriples(triples);
+        } catch (err) {
+            setInfoError(err.message);
+        } finally {
+            setLoadingInfo(false);
+        }
+    };
+
+    const handleCloseAllOverlays = () => {
+        setShowInfoOverlay(false);
+        handleCloseOverlay();
+    };
+
     if (!overlayImageUrl) return null;
     const currentObj = imageUris.find(obj => obj.uri === overlayImageUrl) || {};
     return (
         <div
             className="fixed inset-0 bg-black bg-opacity-75 z-[60] flex items-center justify-center"
-            onClick={handleCloseOverlay}
+            onClick={handleCloseAllOverlays}
         >
             <div className="relative bg-white p-4 rounded-lg shadow-2xl max-w-5xl max-h-full overflow-hidden flex flex-col items-center" onClick={e => e.stopPropagation()}>
                 <button
-                    onClick={handleCloseOverlay}
+                    onClick={handleCloseAllOverlays}
                     className="absolute top-2 right-2 bg-red-600 text-white rounded-full h-8 w-8 flex items-center justify-center text-lg font-bold hover:bg-red-700 transition"
                     aria-label="Close"
                 >
@@ -102,18 +127,6 @@ const ResultOverlay = ({
                                 Near Duplicates
                             </button>
                             <div className="flex flex-row items-center gap-2 mt-1 w-full">
-                                <button
-                                    className="ml-4 px-3 py-1 rounded bg-orange-600 text-white text-xs font-semibold shadow hover:bg-orange-700 transition"
-                                    style={{ minWidth: 0,  }}
-                                    onClick={() => {
-                                        onOpenContextOverlay(overlayImageUrl, contextValue);
-                                        handleCloseOverlay();
-                                    }}
-                                    title="Show context for this image"
-                                    //disabled={isFromContext}
-                                >
-                                    Context
-                                </button>
                                 <input
                                     type="number"
                                     min={1}
@@ -153,6 +166,17 @@ const ResultOverlay = ({
 
                     {/* Right: DRES Submission */}
                     <div className="flex flex-row items-center justify-end gap-2" style={{ width: 320 }}>
+                        <button
+                            className="ml-4 px-5 py-1 rounded bg-blue-600 text-white text-xs font-semibold shadow hover:bg-blue-700 transition"
+                            style={{ minWidth: 80 }}
+                            onClick={() => {
+                                setShowInfoOverlay(true);
+                                fetchInfos();
+                            }}
+                            title="Show all info triples for this image"
+                        >
+                            Show Infos
+                        </button>
                          <DresSubmission
                             submissionApi={submissionApi}
                             dresSession={dresSession}
@@ -162,6 +186,48 @@ const ResultOverlay = ({
                         />
                     </div>
                 </div>
+                {/* Info Overlay */}
+                {showInfoOverlay && (
+                    <div
+                        className="absolute inset-0 bg-white bg-opacity-95 z-[80] flex flex-col items-center justify-start p-6 overflow-y-auto"
+                        style={{ pointerEvents: 'auto' }}
+                    >
+                        <button
+                            onClick={() => setShowInfoOverlay(false)}
+                            className="absolute top-2 right-2 bg-red-600 text-white rounded-full h-8 w-8 flex items-center justify-center text-lg font-bold hover:bg-red-700 transition"
+                            aria-label="Close"
+                        >
+                            &times;
+                        </button>
+                        <h2 className="text-lg font-bold mb-4">Image Infos</h2>
+                        {loadingInfo && <div>Loading...</div>}
+                        {infoError && <div className="text-red-600">Error: {infoError}</div>}
+                        {!loadingInfo && !infoError && (
+                            <div className="w-full max-h-[70vh] overflow-y-auto">
+                                <table className="table-fixed w-full text-sm">
+                                    <thead>
+                                        <tr>
+                                            <th className="px-2 py-1 text-left w-1/3 whitespace-nowrap">Predicate</th>
+                                            <th className="px-2 py-1 text-left w-2/3">Object</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {infoTriples.length === 0 ? (
+                                            <tr><td colSpan={2}>No info found.</td></tr>
+                                        ) : (
+                                            infoTriples.map((triple, idx) => (
+                                                <tr key={idx}>
+                                                    <td className="px-2 py-1 whitespace-nowrap overflow-hidden text-ellipsis" style={{maxWidth: '1px'}}>{triple.p?.value}</td>
+                                                    <td className="px-2 py-1 break-words" style={{wordBreak: 'break-word'}}>{triple.o?.value}</td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     );
