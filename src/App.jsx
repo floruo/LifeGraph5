@@ -79,14 +79,14 @@ const App = () => {
     // Country selector state
     const [allCountries, setAllCountries] = useState([]);
     const [loadingCountries, setLoadingCountries] = useState(true);
-    const [selectedCountry, setSelectedCountry] = useState('');
+    const [selectedCountries, setSelectedCountries] = useState([]); // <-- now array
     const [countrySearch, setCountrySearch] = useState('');
     const [forceFetchCountries, setForceFetchCountries] = useState(false);
 
     // City selector state
     const [allCities, setAllCities] = useState([]);
     const [loadingCities, setLoadingCities] = useState(true);
-    const [selectedCity, setSelectedCity] = useState('');
+    const [selectedCities, setSelectedCities] = useState([]); // <-- now array
     const [citySearch, setCitySearch] = useState('');
     const [forceFetchCities, setForceFetchCities] = useState(false);
 
@@ -99,7 +99,7 @@ const App = () => {
     // Location selector state
     const [allLocations, setAllLocations] = useState([]);
     const [loadingLocations, setLoadingLocations] = useState(true);
-    const [selectedLocation, setSelectedLocation] = useState('');
+    const [selectedLocations, setSelectedLocations] = useState([]); // <-- now array
     const [locationSearch, setLocationSearch] = useState('');
     const [forceFetchLocations, setForceFetchLocations] = useState(false);
 
@@ -207,12 +207,12 @@ const App = () => {
     useEffect(() => {
         if (nearDuplicateActive || contextActive) {
             setSelectedTags([]);
-            setSelectedCountry('');
+            setSelectedCountries([]);
             setTagSearch('');
             setCountrySearch('');
             setCitySearch('');
-            setSelectedCity('');
-            setSelectedLocation('');
+            setSelectedCities([]);
+            setSelectedLocations([]);
             setStartDate(minDate);
             setEndDate(maxDate);
             setIncludeStartDay(false);
@@ -297,7 +297,7 @@ const App = () => {
         const query = getSparqlQuery();
         //console.log(query);
         setLiveSparqlQuery(query);
-    }, [selectedTags, selectedCountry, selectedCity, selectedLocation, includeStartDay, includeEndDay, startDate, endDate, selectedWeekdays, selectedYears, queryMode, selectedMonths, selectedCategories, groupByDay, includeStartTime, includeEndTime, startTime, endTime, selectedCaption, clipSimilarityText, clipSimilarityK, selectedOcr, knnActive, nearDuplicateActive, contextActive, contextUri, contextValue]);
+    }, [selectedTags, selectedCountries, selectedCities, selectedLocations, includeStartDay, includeEndDay, startDate, endDate, selectedWeekdays, selectedYears, queryMode, selectedMonths, selectedCategories, groupByDay, includeStartTime, includeEndTime, startTime, endTime, selectedCaption, clipSimilarityText, clipSimilarityK, selectedOcr, knnActive, nearDuplicateActive, contextActive, contextUri, contextValue]);
 
     useEffect(() => {
         if (knnActive) {
@@ -425,8 +425,8 @@ const App = () => {
 
         if (
             selectedTags.length === 0 &&
-            !selectedCountry &&
-            !selectedCity &&
+            selectedCountries.length === 0 &&
+            selectedCities.length === 0 &&
             !includeStartDay &&
             !includeEndDay &&
             selectedWeekdays.length === 0 &&
@@ -435,7 +435,7 @@ const App = () => {
             selectedCategories.length === 0 &&
             !includeStartTime &&
             !includeEndTime &&
-            !selectedLocation &&
+            selectedLocations.length === 0 &&
             !selectedCaption &&
             !selectedOcr &&
             !knnActive &&
@@ -491,15 +491,15 @@ const App = () => {
                 whereClauses.push(...tagClauses);
                 tagPrefixes.forEach(p => pushUnique(prefixes, p));
             } else if (type === 'country') {
-                const { countryClauses, countryPrefixes } = getCountryBlock(selectedCountry, pushUnique);
+                const { countryClauses, countryPrefixes } = getCountryBlock(selectedCountries, pushUnique);
                 whereClauses.push(...countryClauses);
                 countryPrefixes.forEach(p => pushUnique(prefixes, p));
             } else if (type === 'city') {
-                const { cityClauses, cityPrefixes } = getCityBlock(selectedCity, pushUnique);
+                const { cityClauses, cityPrefixes } = getCityBlock(selectedCities, pushUnique);
                 whereClauses.push(...cityClauses);
                 cityPrefixes.forEach(p => pushUnique(prefixes, p));
             } else if (type === 'location') {
-                const { locationClauses, locationPrefixes } = getLocationBlock(selectedLocation, pushUnique);
+                const { locationClauses, locationPrefixes } = getLocationBlock(selectedLocations, pushUnique);
                 whereClauses.push(...locationClauses);
                 locationPrefixes.forEach(p => pushUnique(prefixes, p));
             } else if (type === 'date') {
@@ -651,14 +651,14 @@ const App = () => {
     };
 
     // Add a handler to clear all query filters
-    const handleClearFilters = () => {
+    const handleClearFilters = (clearResults = true) => {
         setSelectedTags([]);
-        setSelectedCountry('');
+        setSelectedCountries([]);
         setTagSearch('');
         setCountrySearch('');
         setCitySearch('');
-        setSelectedCity('');
-        setSelectedLocation('');
+        setSelectedCities([]);
+        setSelectedLocations([]);
         setStartDate(minDate);
         setEndDate(maxDate);
         setIncludeStartDay(false);
@@ -668,9 +668,6 @@ const App = () => {
         setSelectedWeekdays([]);
         setWeekdayRange([null, null]);
 
-        setImageUris([]);
-        setError(null);
-        setQueryTime(null);
         setSelectedYears([]);
         setSelectedMonths([]);
         setSelectedCategories([]);
@@ -685,6 +682,41 @@ const App = () => {
         setNearDuplicateActive(false);
         setContextActive(false)
         //setTriggerFetch(0);
+        if (clearResults) {
+            setImageUris([]);
+            setError(null);
+            setQueryTime(null);
+        }
+    };
+
+    const handleInfoFilterClick = (predicate, object) => {
+        handleClearFilters(false); // Clear all existing filters
+
+        const predicateMap = {
+            'http://lsc.dcu.ie/schema#tag': { type: 'tags', setter: setSelectedTags, value: object.replace('http://lsc.dcu.ie/tag#', '') },
+            'http://lsc.dcu.ie/schema#category': { type: 'category', setter: setSelectedCategories, value: object },
+            'http://lsc.dcu.ie/schema#country': { type: 'country', setter: setSelectedCountries, value: object },
+            'http://lsc.dcu.ie/schema#city': { type: 'city', setter: setSelectedCities, value: object },
+            'http://lsc.dcu.ie/schema#location_name': { type: 'location', setter: setSelectedLocations, value: object },
+            'http://lsc.dcu.ie/schema#day': { type: 'date', setter: setStartDate, value: object.replace('http://lsc.dcu.ie/day#', '') },
+            'http://lsc.dcu.ie/schema#caption': { type: 'caption', setter: setSelectedCaption, value: object },
+            'http://lsc.dcu.ie/schema#ocr': { type: 'ocr', setter: setSelectedOcr, value: object }
+        };
+
+        const filter = predicateMap[predicate];
+        if (filter) {
+            if (['tags', 'category', 'country', 'city', 'location'].includes(filter.type)) {
+                filter.setter([filter.value]);
+            } else {
+                filter.setter(filter.value);
+            }
+
+            if (filter.type === 'date') {
+                setIncludeStartDay(true);
+                setEndDate(filter.value); // Also set end date to keep it a single day filter
+                setIncludeEndDay(true);
+            }
+        }
     };
 
     const handleClearLogs = () => {
@@ -771,8 +803,8 @@ const App = () => {
                                 allCountries,
                                 loadingCountries,
                                 setLoadingCountries,
-                                selectedCountry,
-                                setSelectedCountry,
+                                selectedCountries,
+                                setSelectedCountries,
                                 countrySearch,
                                 setCountrySearch,
                                 forceFetchCountries,
@@ -780,8 +812,8 @@ const App = () => {
                                 allCities,
                                 loadingCities,
                                 setLoadingCities,
-                                selectedCity,
-                                setSelectedCity,
+                                selectedCities,
+                                setSelectedCities,
                                 citySearch,
                                 setCitySearch,
                                 forceFetchCities,
@@ -792,8 +824,8 @@ const App = () => {
                                 setSelectedCategories,
                                 forceFetchCategories,
                                 setForceFetchCategories,
-                                selectedLocation,
-                                setSelectedLocation,
+                                selectedLocations,
+                                setSelectedLocations,
                                 locationSearch,
                                 setLocationSearch,
                                 loadingLocations,
@@ -964,6 +996,7 @@ const App = () => {
                 dresSession={dresSession}
                 activeRun={activeRun}
                 isFromContext={isFromContextOverlay}
+                onInfoFilterClick={handleInfoFilterClick}
             />
             <ContextOverlay
                 show={showContextOverlay}

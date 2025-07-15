@@ -330,3 +330,9 @@ export const fetchDayRange = async (force = false) => {
     })();
     return dayRangePromise;
 };
+
+export const fetchImageInfos = async (overlayImageUrl) => {
+    if (!overlayImageUrl) return [];
+    const query = `SELECT * WHERE { <${overlayImageUrl}> ?p ?o } ORDER BY ?p ?o`;
+    return await executeSparqlQuery(query);
+};
