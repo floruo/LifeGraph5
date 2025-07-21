@@ -2,22 +2,36 @@
 
 # LifeGraph 5 Frontend
 
-A React-based frontend for exploring and querying lifelog image data using tags and countries, powered by a SPARQL endpoint.
+A React-based frontend for exploring and querying lifelog image data using tags, countries, and more, powered by a SPARQL endpoint.
+
 
 ## Features
 
 - Query a configurable SPARQL endpoint
-- Filter results by tags, country, city, category, location, date, time, caption, clip, and OCR
+- Filter results by tags, country, city, category, location, date, time, caption, CLIP embedding, and OCR
 - Interactive UI for building and running SPARQL queries
 - Responsive design using Tailwind CSS
 - Modular component structure for easy customization
-- Submissions to the Distributed Retrieval Evaluation Server ([DRES](https://github.com/dres-dev/DRES))
-- Supports logging
+- Submissions to the Distributed Retrieval Evaluation Server ([DRES](https://github.com/dres-dev/DRES)) via integrated client
+- Logging support via LogViewer
+- Uses Vite for fast development and build
 
-## IMPORTANT: Changes Made to the LSC23 Data
 
-- Replaced whitespace in tag URIs with underscore
-- Removed leading whitespace for categories
+## Filters & Selectors
+
+- **Selectors:**
+   - Category
+   - City
+   - Country
+   - Location
+   - Tag
+- **Filters:**
+  - Caption
+  - CLIP
+  - Date
+  - OCR
+  - Time
+
 
 ## Getting Started
 
@@ -51,41 +65,46 @@ A React-based frontend for exploring and querying lifelog image data using tags 
 5. **Open in your browser:**
    - Visit [http://localhost:5173](http://localhost:5173) (or the port shown in your terminal).
 
+### Setting Up MeGraS
+
+MeGraS (MediaGraph Store) is required to run the SPARQL endpoint and is available as a Docker container or from source. For instructions, follow the [README](http://megras.org).
+
+
 ## Project Structure
 
 ```
 src/
-  App.jsx      # Main app component
-  config.js    # App configuration
-  index.css    # Tailwind CSS imports
-  main.jsx     # Entry point
+  App.jsx                # Main app component
+  config.js              # App configuration
+  config.local.json      # Local config overrides
+  index.css              # Tailwind CSS styles
+  main.jsx               # Entry point
   components/
-    RenderFilters.jsx    # Renders all filter components
+    ContextOverlay.jsx   # Contextual overlays
+    DresClient.jsx       # DRES integration
+    LogViewer.jsx        # Logging UI
+    RenderFilters.jsx    # Renders all filters
     ResultDisplay.jsx    # Displays query results
     ResultOverlay.jsx    # Overlay for results
-    SparqlQueryArea.jsx  # SPARQL query editor and runner
-    LogViewer.jsx        # Displays logs
-    DresClient.jsx       # DRES client for submissions
+    SparqlQueryArea.jsx  # SPARQL query builder
     filter/
-      CaptionFilter.jsx  # Filter by caption
-      ClipFilter.jsx     # Filter by clip
-      DateFilter.jsx     # Filter by date
-      OcrFilter.jsx      # Filter by OCR
-      TimeFilter.jsx     # Filter by time
+      CaptionFilter.jsx
+      ClipFilter.jsx
+      DateFilter.jsx
+      OcrFilter.jsx
+      TimeFilter.jsx
     selector/
-      CategorySelector.jsx # Select category
-      CitySelector.jsx     # Select city
-      CountrySelector.jsx  # Select country
-      LocationSelector.jsx # Select location
-      TagSelector.jsx      # Select tags
+      CategorySelector.jsx
+      CitySelector.jsx
+      CountrySelector.jsx
+      LocationSelector.jsx
+      TagSelector.jsx
   utils/
-    sparql.js  # SPARQL query utilities
-  openapi/
-    DRES/
-      client      # DRES client for API interactions
-  index.html      # HTML template
-  vite.config.js  # Vite config
-  package.json    # Project metadata and scripts
+    sparql.js            # SPARQL query utilities
+openapi/
+  DRES/                  # DRES OpenAPI client
+    client/
+      ...                # Client code and docs
 ```
 
 ## Scripts
@@ -95,13 +114,14 @@ src/
 - `npm run preview` – Preview production build
 - `npm run lint` – Lint code
 
+
 ## Customization
 
-- **Filter Order:** Modify the order of filters in `src/config.js` and update `FILTER_ORDER`.
+- **Filter Order:** Modify the order and inclusion of filters in `src/config.js` and update `FILTER_ORDER`.
 - **Styling:** Uses Tailwind CSS and Inter font (see `index.html` and `index.css`).
 - **SPARQL Queries:** Modify or extend queries as needed.
 - **Filters & Selectors:** Add or customize filter/selector components in `src/components/filter/` and `src/components/selector/`.
-- **DRES Configuration:** Create a `config.local.json` in `src` and add the user and password in the following format:
+- **DRES Configuration:** Update the `config.local.json` in `src` and add the user and password in the following format:
    ```json
    {
       "DRES_USER": "MyUserName",
@@ -111,4 +131,4 @@ src/
 
 ## License
 
-MIT
+See LICENSE for details.
