@@ -70,6 +70,20 @@ A React-based frontend for exploring and querying lifelog image data using tags,
 MeGraS (MediaGraph Store) is required to run the SPARQL endpoint and is available as a Docker container or from source. For instructions, follow the [README](http://megras.org).
 
 
+## LifeGraph 5 Ontology
+
+This application processes and manages data that is semantically described using an [OWL ontology](LifeGraph5.owl) that serves as the formal schema for the image-related information within the LSC dataset.
+
+The central concept in this descriptive framework is the lsc-schema:Image class, which represents individual images. The ontology defines various properties that characterize instances of lsc-schema:Image:
+
+- Object Properties: These establish relationships between an image and other entities. For example, lsc-schema:day links an image to a specific day (an instance of lsc-schema:Day), and lsc-schema:tag associates an image with descriptive keywords (instances of lsc-schema:Tag).
+- Data Properties: These capture literal attributes of an image, such as lsc-schema:caption, lsc-schema:location_name, and technical details like megras-schema:fileName and megras-schema:mediaType.
+
+The ontology includes a core lsc-schema:Tag class, which is the type for all individual descriptive tags (e.g., "indoor", "sky", "wall") that are applied to images. This structure ensures that the tags themselves are instances of a defined concept, rather than being defined as separate classes. Additionally, a custom megras-schema:FloatVector datatype is provided to accurately represent numerical vector data, such as megras-derived:averageColor and megras-derived:clipEmbedding.
+
+By adhering to this ontology, the application's data is consistent, well-defined, and semantically rich, enabling robust organization, querying, and advanced analysis of image content for knowledge discovery.
+
+
 ## Project Structure
 
 ```
