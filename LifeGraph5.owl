@@ -1,0 +1,117 @@
+<?xml version="1.0"?>
+<rdf:RDF
+    xmlns="http://lsc.dcu.ie/ontology#"
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:owl="http://www.w3.org/2002/07/owl#"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+    xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+    xmlns:lsc-schema="http://lsc.dcu.ie/schema#"
+    xmlns:megras-derived="http://megras.org/derived/"
+    xmlns:megras-schema="http://megras.org/schema#">
+
+    <owl:Ontology rdf:about="http://lsc.dcu.ie/ontology"/>
+
+    <!-- Custom Datatype for FloatVector -->
+    <rdfs:Datatype rdf:about="&megras-schema;FloatVector">
+        <rdfs:label>FloatVector</rdfs:label>
+        <rdfs:comment>A custom datatype for representing a vector of floating-point numbers.</rdfs:comment>
+    </rdfs:Datatype>
+
+    <!-- Core LSC Schema Classes -->
+    <owl:Class rdf:about="&lsc-schema;Image"/>
+    <owl:Class rdf:about="&lsc-schema;Tag"/>
+    <owl:Class rdf:about="&lsc-schema;Day"/>
+
+    <!-- OWL Object Properties -->
+    <owl:ObjectProperty rdf:about="&lsc-schema;day">
+        <rdfs:domain rdf:resource="&lsc-schema;Image"/>
+        <rdfs:range rdf:resource="&lsc-schema;Day"/>
+    </owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="&lsc-schema;tag">
+        <rdfs:domain rdf:resource="&lsc-schema;Image"/>
+        <rdfs:range rdf:resource="&lsc-schema;Tag"/>
+    </owl:ObjectProperty>
+
+    <!-- OWL Data Properties -->
+    <owl:DatatypeProperty rdf:about="&lsc-schema;caption">
+        <rdfs:domain rdf:resource="&lsc-schema;Image"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
+    </owl:DatatypeProperty>
+    <owl:DatatypeProperty rdf:about="&lsc-schema;category">
+        <rdfs:domain rdf:resource="&lsc-schema;Image"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
+    </owl:DatatypeProperty>
+    <owl:DatatypeProperty rdf:about="&lsc-schema;city">
+        <rdfs:domain rdf:resource="&lsc-schema;Image"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
+    </owl:DatatypeProperty>
+    <owl:DatatypeProperty rdf:about="&lsc-schema;country">
+        <rdfs:domain rdf:resource="&lsc-schema;Image"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
+    </owl:DatatypeProperty>
+    <owl:DatatypeProperty rdf:about="&lsc-schema;id">
+        <rdfs:domain rdf:resource="&lsc-schema;Image"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
+    </owl:DatatypeProperty>
+    <owl:DatatypeProperty rdf:about="&lsc-schema;local_time">
+        <rdfs:domain rdf:resource="&lsc-schema;Image"/>
+        <rdfs:range rdf:resource="&xsd;dateTime"/>
+    </owl:DatatypeProperty>
+    <owl:DatatypeProperty rdf:about="&lsc-schema;location_name">
+        <rdfs:domain rdf:resource="&lsc-schema;Image"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
+    </owl:DatatypeProperty>
+    <owl:DatatypeProperty rdf:about="&lsc-schema;ocr">
+        <rdfs:domain rdf:resource="&lsc-schema;Image"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
+    </owl:DatatypeProperty>
+    <owl:DatatypeProperty rdf:about="&lsc-schema;ordinal">
+        <rdfs:domain rdf:resource="&lsc-schema;Image"/>
+        <rdfs:range rdf:resource="&xsd;long"/>
+    </owl:DatatypeProperty>
+    <owl:DatatypeProperty rdf:about="&lsc-schema;utc_time">
+        <rdfs:domain rdf:resource="&lsc-schema;Image"/>
+        <rdfs:range rdf:resource="&xsd;dateTime"/>
+    </owl:DatatypeProperty>
+    <owl:DatatypeProperty rdf:about="&megras-derived;averageColor">
+        <rdfs:domain rdf:resource="&lsc-schema;Image"/>
+        <rdfs:range rdf:resource="&megras-schema;FloatVector"/>
+    </owl:DatatypeProperty>
+    <owl:DatatypeProperty rdf:about="&megras-derived;clipEmbedding">
+        <rdfs:domain rdf:resource="&lsc-schema;Image"/>
+        <rdfs:range rdf:resource="&megras-schema;FloatVector"/>
+    </owl:DatatypeProperty>
+    <owl:DatatypeProperty rdf:about="&megras-schema;bounds">
+        <rdfs:domain rdf:resource="&lsc-schema;Image"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
+    </owl:DatatypeProperty>
+    <owl:DatatypeProperty rdf:about="&megras-schema;canonicalId">
+        <rdfs:domain rdf:resource="&lsc-schema;Image"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
+    </owl:DatatypeProperty>
+    <owl:DatatypeProperty rdf:about="&megras-schema;canonicalMimeType">
+        <rdfs:domain rdf:resource="&lsc-schema;Image"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
+    </owl:DatatypeProperty>
+    <owl:DatatypeProperty rdf:about="&megras-schema;fileName">
+        <rdfs:domain rdf:resource="&lsc-schema;Image"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
+    </owl:DatatypeProperty>
+    <owl:DatatypeProperty rdf:about="&megras-schema;mediaType">
+        <rdfs:domain rdf:resource="&lsc-schema;Image"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
+    </owl:DatatypeProperty>
+    <owl:DatatypeProperty rdf:about="&megras-schema;previewId">
+        <rdfs:domain rdf:resource="&lsc-schema;Image"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
+    </owl:DatatypeProperty>
+    <owl:DatatypeProperty rdf:about="&megras-schema;rawId">
+        <rdfs:domain rdf:resource="&lsc-schema;Image"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
+    </owl:DatatypeProperty>
+    <owl:DatatypeProperty rdf:about="&megras-schema;rawMimeType">
+        <rdfs:domain rdf:resource="&lsc-schema;Image"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
+    </owl:DatatypeProperty>
+
+</rdf:RDF>
